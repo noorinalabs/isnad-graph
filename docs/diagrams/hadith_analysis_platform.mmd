@@ -1,0 +1,65 @@
+flowchart TB
+    subgraph Sources["PHASE 1: DATA SOURCES"]
+        S1["LK Corpus\n39K hadiths\nCSV - Isnad/Matn segmented"]
+        S2["Sanadset 650K\nKaggle - Pre-tagged narrators"]
+        S3["Narrator Bios 24K+\nKaggle + thehadith.co.uk"]
+        S4["ThaqalaynAPI\nShia corpus - REST/GraphQL"]
+        S5["fawazahmed0\nCDN JSON - Multi-language"]
+        S6["Sunnah.com API\nREST - Graded + curated"]
+        S7["muhaddithat/isnad\nGitHub - Network CSVs"]
+    end
+
+    subgraph Ingest["PHASE 2: INGESTION"]
+        I1["Python ETL Scripts"]
+        I2["NER Pipeline\nIsnad entity extraction"]
+        I3["Narrator Disambiguation\nFuzzy match + ID resolution"]
+        I4["Matn Dedup\nSemantic similarity scoring"]
+    end
+
+    subgraph Transform["PHASE 3: TRANSFORM"]
+        T1["Chain Decomposition\nIsnad string to graph edges"]
+        T2["Cross-Collection Mapping\nSunni-Shia parallel detection"]
+        T3["Biographical Enrichment\nJoin narrator metadata"]
+        T4["Historical Tagging\nTimeline + caliphate alignment"]
+        T5["Topic Classification\nLDA or zero-shot NLI"]
+    end
+
+    subgraph Store["PHASE 4: STORAGE"]
+        DB1[("Neo4j\nGraph DB\nPrimary Store")]
+        DB2[("PostgreSQL\nRelational\nMetadata + Search")]
+        DB3[("Vector Store\nEmbeddings\nSemantic Search")]
+    end
+
+    subgraph Analyze["PHASE 5: ANALYSIS"]
+        A1["Isnad Graph Algorithms\nCentrality / Bottlenecks"]
+        A2["Narrator Volume Analysis\nDegree + Temporal Distribution"]
+        A3["Political Milieu Overlay\nEvent-Chain Correlation"]
+        A4["Sectarian Divergence Maps\nParallel Chain Comparison"]
+        A5["Anomaly Detection\nTemporal/Geographic Impossibilities"]
+    end
+
+    S1 --> I1
+    S2 --> I1
+    S3 --> I1
+    S4 --> I1
+    S5 --> I1
+    S6 --> I1
+    S7 --> I1
+    I1 --> I2
+    I2 --> I3
+    I3 --> I4
+    I4 --> T1
+    I4 --> T2
+    T1 --> T3
+    T2 --> T3
+    T3 --> T4
+    T4 --> T5
+    T5 --> DB1
+    T5 --> DB2
+    T5 --> DB3
+    DB1 --> A1
+    DB1 --> A2
+    DB1 --> A4
+    DB2 --> A3
+    DB3 --> A4
+    DB1 --> A5
