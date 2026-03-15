@@ -1,0 +1,15 @@
+data/raw/
+!data/raw/.gitkeep
+data/staging/
+!data/staging/.gitkeep
+*.parquet
+.env
+__pycache__/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+node_modules/
