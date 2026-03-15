@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from src.config import Neo4jSettings, PostgresSettings, RedisSettings, Settings, get_settings
@@ -85,3 +87,77 @@ def sample_chain_data() -> dict[str, object]:
         "classification": ChainClassification.MUTTASIL,
         "narrator_ids": ["nar:narrator-a", "nar:narrator-b", "nar:narrator-c"],
     }
+
+
+@pytest.fixture
+def tmp_raw_dir(tmp_path: Path) -> Path:
+    """Create and return a temporary 'raw' directory."""
+    d = tmp_path / "raw"
+    d.mkdir()
+    return d
+
+
+@pytest.fixture
+def tmp_staging_dir(tmp_path: Path) -> Path:
+    """Create and return a temporary 'staging' directory."""
+    d = tmp_path / "staging"
+    d.mkdir()
+    return d
+
+
+@pytest.fixture
+def sample_lk_csv(tmp_raw_dir: Path) -> Path:
+    """Write a 5-row mock CSV in LK 16-column format, return the file path."""
+    from src.parse.lk_corpus import LK_COLUMNS
+
+    lk_dir = tmp_raw_dir / "lk"
+    lk_dir.mkdir(parents=True, exist_ok=True)
+
+    rows = [
+        [
+            "1", "Revelation", "الوحي", "1", "Beginning", "بدء الوحي",
+            str(i),
+            "Full English text", "Narrated Abu Hurayra: The Prophet said",
+            "Actions are by intentions", "النص الكامل", "حدثنا أبو هريرة",
+            "إنما الأعمال بالنيات", "", "Sahih", "صحيح",
+        ]
+        for i in range(1, 6)
+    ]
+
+    header = ",".join(LK_COLUMNS)
+    lines = [header] + [",".join(row) for row in rows]
+    csv_path = lk_dir / "albukhari.csv"
+    csv_path.write_text("\n".join(lines), encoding="utf-8")
+    return csv_path
+
+
+@pytest.fixture
+def sample_sanadset_csv(tmp_raw_dir: Path) -> Path:
+    """Write a mock Sanadset CSV with NAR tags, return the file path."""
+    sanadset_dir = tmp_raw_dir / "sanadset"
+    sanadset_dir.mkdir(parents=True, exist_ok=True)
+
+    header = "hadith_id,book_id,hadith,grade"
+    rows = [
+        (
+            "1", "1",
+            "<SANAD><NAR>محمد</NAR> عن <NAR>علي</NAR></SANAD><MATN>متن</MATN>",
+            "Sahih",
+        ),
+        (
+            "2", "1",
+            "<SANAD><NAR>أنس</NAR> عن <NAR>مالك</NAR></SANAD><MATN>متن ثاني</MATN>",
+            "Hasan",
+        ),
+        (
+            "3", "2",
+            "<SANAD>No SANAD</SANAD><MATN>متن ثالث</MATN>",
+            "",
+        ),
+    ]
+    lines = [header]
+    for r in rows:
+        lines.append(f'{r[0]},{r[1]},"{r[2]}",{r[3]}')
+    csv_path = sanadset_dir / "hadiths.csv"
+    csv_path.write_text("\n".join(lines), encoding="utf-8")
+    return csv_path
