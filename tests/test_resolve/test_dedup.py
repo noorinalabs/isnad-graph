@@ -146,7 +146,7 @@ class TestLoadHadithTexts:
             _make_hadith("h-1", "Actions are judged by intentions"),
             _make_hadith("h-2", "The best of you is the one who learns the Quran"),
         ]
-        _write_hadiths(tmp_path / "hadith_test.parquet", rows)
+        _write_hadiths(tmp_path / "hadiths_test.parquet", rows)
         ids, texts, corpora = _load_hadith_texts(tmp_path)
         assert len(ids) == 2
         assert len(texts) == 2
@@ -158,7 +158,7 @@ class TestLoadHadithTexts:
             _make_hadith("h-2", None),  # type: ignore[arg-type]
             _make_hadith("h-3", "   "),
         ]
-        _write_hadiths(tmp_path / "hadith_test.parquet", rows)
+        _write_hadiths(tmp_path / "hadiths_test.parquet", rows)
         ids, texts, corpora = _load_hadith_texts(tmp_path)
         assert len(ids) == 1
         assert ids[0] == "h-1"
@@ -222,7 +222,7 @@ class TestEmbeddingPipeline:
                 sect="shia",
             ),
         ]
-        _write_hadiths(tmp_path / "hadith_test.parquet", rows)
+        _write_hadiths(tmp_path / "hadiths_test.parquet", rows)
 
         output_path = run_dedup(tmp_path, threshold=0.70, top_k=5)
         assert output_path.exists()
@@ -237,7 +237,7 @@ class TestEmbeddingPipeline:
             _make_hadith("h-1", "Test text one"),
             _make_hadith("h-2", "Test text two"),
         ]
-        _write_hadiths(tmp_path / "hadith_test.parquet", rows)
+        _write_hadiths(tmp_path / "hadiths_test.parquet", rows)
 
         run_dedup(tmp_path, threshold=0.70)
         assert (tmp_path / "hadith_embeddings.faiss").exists()
@@ -254,7 +254,7 @@ class TestEmbeddingPipeline:
                 sect="shia",
             ),
         ]
-        _write_hadiths(tmp_path / "hadith_test.parquet", rows)
+        _write_hadiths(tmp_path / "hadiths_test.parquet", rows)
 
         output_path = run_dedup(tmp_path, threshold=0.70)
         table = pq.read_table(output_path)
