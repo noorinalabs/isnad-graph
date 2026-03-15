@@ -2,7 +2,7 @@
 
 from pydantic import BaseModel, ConfigDict
 
-__all__ = ["MetricsResult", "TopicResult"]
+__all__ = ["HistoricalResult", "MetricsResult", "TopicResult"]
 
 
 class MetricsResult(BaseModel):
@@ -16,6 +16,18 @@ class MetricsResult(BaseModel):
     louvain_computed: bool
     degree_computed: bool
     communities_found: int
+
+
+class HistoricalResult(BaseModel):
+    """Result of historical overlay (ACTIVE_DURING edge creation)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    edges_created: int
+    narrators_linked: int
+    events_linked: int
+    narrators_skipped_no_dates: int
+    narrators_skipped_max_lifetime: int
 
 
 class TopicResult(BaseModel):
