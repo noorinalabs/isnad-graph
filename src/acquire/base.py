@@ -87,6 +87,11 @@ def download_file(
 
         logger.info("download_complete", path=str(dest), size=dest.stat().st_size)
         return dest
+    except Exception:
+        # Remove partial file so tenacity retries on a clean slate.
+        if dest.exists():
+            dest.unlink()
+        raise
     finally:
         if own_client:
             _client.close()
