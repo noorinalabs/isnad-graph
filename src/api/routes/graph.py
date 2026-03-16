@@ -138,22 +138,36 @@ def get_narrator_network(
     if not exists:
         raise HTTPException(status_code=404, detail=f"Narrator '{narrator_id}' not found")
 
-    rows: list[dict[str, Any]] = neo4j.execute_read(
+    student_rows: list[dict[str, Any]] = neo4j.execute_read(
         """
-        MATCH (center:Narrator {id: $id})
-        OPTIONAL MATCH (center)-[r1:TRANSMITTED_TO]->(student:Narrator)
-        WITH center, collect(DISTINCT {id: student.id, name_ar: student.name_ar,
-             name_en: student.name_en, gen: student.generation, rel: 'student'}) AS students
-        OPTIONAL MATCH (teacher:Narrator)-[r2:TRANSMITTED_TO]->(center)
-        WITH center, students,
-             collect(DISTINCT {id: teacher.id, name_ar: teacher.name_ar,
-             name_en: teacher.name_en, gen: teacher.generation, rel: 'teacher'}) AS teachers
-        RETURN center.name_ar AS center_name_ar, center.name_en AS center_name_en,
-               center.generation AS center_gen,
-               students[0..$limit] AS students, teachers[0..$limit] AS teachers
+        MATCH (center:Narrator {id: $id})-[:TRANSMITTED_TO]->(student:Narrator)
+        RETURN DISTINCT student.id AS id, student.name_ar AS name_ar,
+               student.name_en AS name_en, student.generation AS gen, 'student' AS rel
+        LIMIT $limit
         """,
         {"id": narrator_id, "limit": limit},
     )
+
+    teacher_rows: list[dict[str, Any]] = neo4j.execute_read(
+        """
+        MATCH (teacher:Narrator)-[:TRANSMITTED_TO]->(center:Narrator {id: $id})
+        RETURN DISTINCT teacher.id AS id, teacher.name_ar AS name_ar,
+               teacher.name_en AS name_en, teacher.generation AS gen, 'teacher' AS rel
+        LIMIT $limit
+        """,
+        {"id": narrator_id, "limit": limit},
+    )
+
+    center_rows: list[dict[str, Any]] = neo4j.execute_read(
+        """
+        MATCH (center:Narrator {id: $id})
+        RETURN center.name_ar AS center_name_ar, center.name_en AS center_name_en,
+               center.generation AS center_gen
+        """,
+        {"id": narrator_id},
+    )
+
+    rows = center_rows
 
     if not rows:
         return NarratorNetworkResponse(
@@ -175,7 +189,7 @@ def get_narrator_network(
     teacher_count = 0
     student_count = 0
 
-    for t in row.get("teachers") or []:
+    for t in teacher_rows:
         if t.get("id") is None:
             continue
         teacher_count += 1
@@ -190,7 +204,7 @@ def get_narrator_network(
             )
         edges.append(GraphEdge(source=t["id"], target=narrator_id, relationship="TRANSMITTED_TO"))
 
-    for s in row.get("students") or []:
+    for s in student_rows:
         if s.get("id") is None:
             continue
         student_count += 1

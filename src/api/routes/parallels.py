@@ -14,6 +14,7 @@ router = APIRouter()
 @router.get("/parallels/{hadith_id}", response_model=ParallelsResponse)
 def get_parallels(
     hadith_id: str,
+    page: int = Query(1, ge=1, description="Page number"),
     limit: int = Query(20, ge=1, le=100),
     neo4j: Neo4jClient = Depends(get_neo4j),
 ) -> ParallelsResponse:
@@ -25,6 +26,8 @@ def get_parallels(
     if not exists:
         raise HTTPException(status_code=404, detail=f"Hadith '{hadith_id}' not found")
 
+    skip = (page - 1) * limit
+
     rows = neo4j.execute_read(
         """
         MATCH (h:Hadith {id: $id})-[r:PARALLEL_OF]-(p:Hadith)
@@ -34,9 +37,10 @@ def get_parallels(
                r.variant_type AS variant_type,
                r.cross_sect AS cross_sect
         ORDER BY r.similarity_score DESC
+        SKIP $skip
         LIMIT $limit
         """,
-        {"id": hadith_id, "limit": limit},
+        {"id": hadith_id, "skip": skip, "limit": limit},
     )
 
     parallels = [
