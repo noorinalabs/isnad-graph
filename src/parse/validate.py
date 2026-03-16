@@ -178,6 +178,20 @@ def validate_staging(staging_dir: Path) -> dict[str, Any]:
                 hadith_checks["arabic_coverage_pct"] = 0.0
                 hadith_checks["english_coverage_pct"] = 0.0
 
+            # Book/chapter metadata coverage
+            book_filled = 0
+            chapter_filled = 0
+            if "book_number" in table.column_names:
+                book_filled = num_rows - table.column("book_number").null_count
+            if "chapter_number" in table.column_names:
+                chapter_filled = num_rows - table.column("chapter_number").null_count
+            if num_rows > 0:
+                hadith_checks["book_coverage_pct"] = round(100.0 * book_filled / num_rows, 2)
+                hadith_checks["chapter_coverage_pct"] = round(100.0 * chapter_filled / num_rows, 2)
+            else:
+                hadith_checks["book_coverage_pct"] = 0.0
+                hadith_checks["chapter_coverage_pct"] = 0.0
+
             file_result["hadith_checks"] = hadith_checks
 
         results.append(file_result)
@@ -237,6 +251,10 @@ def _print_report(summary: dict[str, Any]) -> None:
             print(f"    Empty matn_en: {hc['empty_matn_en']}")
             print(f"    Arabic coverage: {hc['arabic_coverage_pct']}%")
             print(f"    English coverage: {hc['english_coverage_pct']}%")
+            if "book_coverage_pct" in hc:
+                print(f"    Book coverage: {hc['book_coverage_pct']}%")
+            if "chapter_coverage_pct" in hc:
+                print(f"    Chapter coverage: {hc['chapter_coverage_pct']}%")
 
         print()
 
