@@ -10,8 +10,8 @@ A computational hadith analysis platform that ingests Sunni and Shia hadith coll
 | Relational Store | **PostgreSQL 16+ with pgvector** | Metadata, vector embeddings for semantic similarity |
 | Cache | **Redis** | API response caching |
 | Language | **Python 3.14+** | ETL pipeline, graph algorithms, API |
-| API (Phase 5) | **FastAPI** | REST/GraphQL endpoints for querying the graph |
-| Frontend (Phase 5) | **React + TypeScript** | Interactive narrator network visualization |
+| API | **FastAPI** | REST endpoints for querying the graph |
+| Frontend | **React + TypeScript** | Interactive narrator network visualization (D3.js) |
 
 **Graph schema nodes:** `NARRATOR`, `HADITH`, `COLLECTION`, `CHAIN`, `GRADING`, `HISTORICAL_EVENT`, `LOCATION`
 
@@ -38,7 +38,46 @@ Copy `.env.example` to `.env` and configure database credentials and API keys be
 | 2 | Entity Resolution | :white_check_mark: |
 | 3 | Graph Loading | :white_check_mark: |
 | 4 | Enrichment & Metrics | :white_check_mark: |
-| 5 | API & Frontend | :white_large_square: |
+| 5 | API & Frontend | :white_check_mark: |
+
+## API
+
+The REST API is built with FastAPI and exposes the graph data for querying.
+
+**Endpoints:**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/` | Health check (Neo4j connectivity) |
+| GET | `/api/v1/narrators` | Paginated narrator list |
+| GET | `/api/v1/narrators/{id}` | Single narrator by ID |
+| GET | `/api/v1/hadiths` | Paginated hadith list |
+| GET | `/api/v1/hadiths/{id}` | Single hadith by ID |
+| GET | `/api/v1/collections` | All collections |
+| GET | `/api/v1/collections/{id}` | Single collection by ID |
+| GET | `/api/v1/graph/narrator/{id}/chains` | Isnad chains through a narrator |
+| GET | `/api/v1/graph/hadith/{id}/chain` | Chain visualization for a hadith |
+| GET | `/api/v1/graph/narrator/{id}/network` | Narrator ego network (teachers/students) |
+| GET | `/api/v1/search?q=...` | Full-text search across narrators and hadiths |
+| GET | `/api/v1/search/semantic?q=...` | Semantic search (pgvector, coming soon) |
+| GET | `/api/v1/parallels/{id}` | Cross-sectarian parallel hadiths |
+| GET | `/api/v1/timeline` | Historical timeline entries |
+
+**Run the API:**
+
+```bash
+uvicorn src.api.app:create_app --factory --reload
+```
+
+## Frontend
+
+The frontend is a React + TypeScript application with interactive narrator network visualizations powered by D3.js.
+
+**Run the frontend:**
+
+```bash
+cd frontend && npm install && npm run dev
+```
 
 ## Data Sources
 
@@ -63,9 +102,11 @@ isnad-graph/
 │   ├── graph/              # Phase 3: Neo4j node/edge loaders
 │   ├── enrich/             # Phase 4: graph metrics, topic classification
 │   ├── models/             # Frozen Pydantic v2 models (nodes & edges)
+│   ├── api/               # Phase 5: FastAPI app, routes, response models
 │   ├── utils/              # Arabic text processing, DB clients, logging
 │   ├── config.py           # Pydantic Settings (loads .env)
 │   └── cli.py              # CLI entry point (`isnad` command)
+├── frontend/               # React + TypeScript frontend (Vite)
 ├── data/
 │   ├── raw/                # Downloaded source files
 │   ├── staging/            # Normalized Parquet intermediates
