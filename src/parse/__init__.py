@@ -5,7 +5,15 @@ from __future__ import annotations
 from pathlib import Path
 from types import ModuleType
 
-from src.parse import fawaz, lk_corpus, muhaddithat, open_hadith, sunnah_api, thaqalayn
+from src.parse import (
+    fawaz,
+    lk_corpus,
+    muhaddithat,
+    open_hadith,
+    sunnah_api,
+    sunnah_scraped,
+    thaqalayn,
+)
 from src.parse.sanadset import parse_sanadset
 from src.utils.logging import get_logger
 
@@ -17,6 +25,7 @@ PARSERS: list[tuple[str, ModuleType | None]] = [
     ("thaqalayn", thaqalayn),
     ("fawaz", fawaz),
     ("sunnah", sunnah_api),
+    ("sunnah_scraped", sunnah_scraped),
     ("open_hadith", open_hadith),
     ("muhaddithat", muhaddithat),
 ]
