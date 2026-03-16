@@ -66,6 +66,8 @@ class Settings(BaseSettings):
         "end_times",
     ]
 
+    cors_origins: list[str] = ["http://localhost:3000"]
+
     log_level: str = "INFO"
     log_format: str = "console"
 

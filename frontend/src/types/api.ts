@@ -102,6 +102,11 @@ export interface TimelineResponse {
   total: number
 }
 
+export interface TimelineRangeResponse {
+  min_year_ah: number
+  max_year_ah: number
+}
+
 export interface ParallelHadith {
   id: string
   matn_ar: string
@@ -117,6 +122,23 @@ export interface ParallelsResponse {
   hadith_id: string
   parallels: ParallelHadith[]
   total: number
+}
+
+export interface ParallelPair {
+  hadith_a_id: string
+  hadith_a_corpus: string
+  hadith_b_id: string
+  hadith_b_corpus: string
+  similarity_score: number | null
+  variant_type: string | null
+  cross_sect: boolean
+}
+
+export interface ParallelPairsResponse {
+  items: ParallelPair[]
+  total: number
+  page: number
+  limit: number
 }
 
 export interface GraphNode {

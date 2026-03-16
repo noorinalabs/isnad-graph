@@ -41,6 +41,7 @@ dev = [
     "hypothesis>=6.0",
     "playwright>=1.49",
     "pytest-playwright>=0.6",
+    "pytest-rerunfailures>=14.0",
 ]
 ml = [
     "sentence-transformers>=2.5",

@@ -27,6 +27,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
+    from src.config import get_settings
+
+    settings = get_settings()
     app = FastAPI(
         title="isnad-graph API",
         description="Computational Hadith Analysis Platform",
@@ -35,7 +38,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"],  # frontend dev server only
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],

@@ -5,10 +5,30 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 
 from src.api.deps import get_neo4j
-from src.api.models import TimelineEntry, TimelineResponse
+from src.api.models import TimelineEntry, TimelineRangeResponse, TimelineResponse
 from src.utils.neo4j_client import Neo4jClient
 
 router = APIRouter()
+
+
+@router.get("/timeline/range", response_model=TimelineRangeResponse)
+def get_timeline_range(
+    neo4j: Neo4jClient = Depends(get_neo4j),
+) -> TimelineRangeResponse:
+    """Return the min/max year_ah range from HistoricalEvent nodes."""
+    rows = neo4j.execute_read(
+        """
+        MATCH (e:HistoricalEvent)
+        RETURN min(e.year_ah) AS min_year, max(coalesce(e.end_year_ah, e.year_ah)) AS max_year
+        """,
+        {},
+    )
+    if rows and rows[0]["min_year"] is not None:
+        return TimelineRangeResponse(
+            min_year_ah=rows[0]["min_year"],
+            max_year_ah=rows[0]["max_year"],
+        )
+    return TimelineRangeResponse(min_year_ah=0, max_year_ah=300)
 
 
 @router.get("/timeline", response_model=TimelineResponse)

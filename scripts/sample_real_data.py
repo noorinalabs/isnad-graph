@@ -10,10 +10,14 @@ is gitignored.
 from __future__ import annotations
 
 import argparse
-import csv
 import shutil
 import sys
 from pathlib import Path
+
+import pyarrow.csv as pcsv
+import pyarrow.parquet as pq
+
+from src.parse.base import read_csv_robust
 
 DATA_RAW_DEFAULT = Path("data/raw")
 OUTPUT_DEFAULT = Path("data/test_samples")
@@ -21,23 +25,13 @@ SAMPLE_ROWS = 100
 
 
 def _sample_csv(src: Path, dst: Path, max_rows: int = SAMPLE_ROWS) -> int:
-    """Copy up to max_rows from a CSV file, preserving the header."""
+    """Copy up to max_rows from a CSV file using read_csv_robust for encoding handling."""
     dst.parent.mkdir(parents=True, exist_ok=True)
-    count = 0
-    with (
-        open(src, encoding="utf-8", errors="replace") as fin,
-        open(dst, "w", encoding="utf-8", newline="") as fout,
-    ):
-        reader = csv.reader(fin)
-        writer = csv.writer(fout)
-        for i, row in enumerate(reader):
-            writer.writerow(row)
-            if i == 0:
-                continue  # header
-            count += 1
-            if count >= max_rows:
-                break
-    return count
+    table, enc = read_csv_robust(src)
+    sliced = table.slice(0, min(max_rows, table.num_rows))
+    write_opts = pcsv.WriteOptions(include_header=True)
+    pcsv.write_csv(sliced, dst, write_options=write_opts)
+    return sliced.num_rows
 
 
 def _sample_json(src: Path, dst: Path, max_items: int = SAMPLE_ROWS) -> int:
@@ -64,6 +58,15 @@ def _sample_json(src: Path, dst: Path, max_items: int = SAMPLE_ROWS) -> int:
     # Single object — copy as-is
     shutil.copy2(src, dst)
     return 1
+
+
+def _sample_parquet(src: Path, dst: Path, max_rows: int = SAMPLE_ROWS) -> int:
+    """Sample rows from a Parquet file."""
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    table = pq.read_table(src)
+    sliced = table.slice(0, min(max_rows, table.num_rows))
+    pq.write_table(sliced, dst, compression="snappy")
+    return sliced.num_rows
 
 
 def _sample_source(name: str, raw_dir: Path, output_dir: Path) -> int:

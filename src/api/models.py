@@ -207,6 +207,31 @@ class ParallelsResponse(BaseModel):
     total: int
 
 
+class ParallelPair(BaseModel):
+    """A pair of parallel hadiths with similarity metadata."""
+
+    model_config = ConfigDict(frozen=True)
+
+    hadith_a_id: str
+    hadith_a_corpus: str
+    hadith_b_id: str
+    hadith_b_corpus: str
+    similarity_score: float | None = None
+    variant_type: str | None = None
+    cross_sect: bool = False
+
+
+class ParallelPairsResponse(BaseModel):
+    """Paginated list of parallel hadith pairs."""
+
+    model_config = ConfigDict(frozen=True)
+
+    items: list[ParallelPair]
+    total: int
+    page: int
+    limit: int
+
+
 # --- Timeline models ---
 
 
@@ -232,3 +257,12 @@ class TimelineResponse(BaseModel):
 
     entries: list[TimelineEntry]
     total: int
+
+
+class TimelineRangeResponse(BaseModel):
+    """Min/max year range for timeline data."""
+
+    model_config = ConfigDict(frozen=True)
+
+    min_year_ah: int
+    max_year_ah: int
