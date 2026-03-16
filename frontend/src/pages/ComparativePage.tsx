@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { fetchHadiths } from '../api/client'
+import { fetchParallelPairs } from '../api/client'
 
 export default function ComparativePage() {
   const [page, setPage] = useState(1)
   const navigate = useNavigate()
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ['hadiths-with-parallels', page],
-    queryFn: () => fetchHadiths(page, 20),
+    queryKey: ['parallel-pairs', page],
+    queryFn: () => fetchParallelPairs(page, 20),
   })
 
   const totalPages = data ? Math.ceil(data.total / data.limit) : 0
@@ -18,7 +18,7 @@ export default function ComparativePage() {
     <div>
       <h2>Comparative Analysis</h2>
       <p style={{ color: '#666', marginBottom: '1rem' }}>
-        Browse hadiths that have cross-sectarian parallels (PARALLEL_OF relationships).
+        Browse cross-sectarian parallel hadith pairs (PARALLEL_OF relationships).
       </p>
 
       {isLoading && <p>Loading...</p>}
@@ -29,29 +29,55 @@ export default function ComparativePage() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '2px solid #ddd', textAlign: 'left' }}>
-                <th style={{ padding: '0.5rem' }}>ID</th>
-                <th style={{ padding: '0.5rem' }}>Source Corpus</th>
-                <th style={{ padding: '0.5rem' }}>Grade</th>
-                <th style={{ padding: '0.5rem' }}>Sunni Parallel</th>
-                <th style={{ padding: '0.5rem' }}>Shia Parallel</th>
+                <th style={{ padding: '0.5rem' }}>Sunni Hadith</th>
+                <th style={{ padding: '0.5rem' }}>Shia Hadith</th>
+                <th style={{ padding: '0.5rem' }}>Similarity</th>
+                <th style={{ padding: '0.5rem' }}>Variant Type</th>
+                <th style={{ padding: '0.5rem' }}>Cross-Sect</th>
               </tr>
             </thead>
             <tbody>
-              {data.items
-                .filter((h) => h.has_sunni_parallel || h.has_shia_parallel)
-                .map((h) => (
-                  <tr
-                    key={h.id}
-                    onClick={() => navigate(`/hadiths/${h.id}`)}
-                    style={{ borderBottom: '1px solid #eee', cursor: 'pointer' }}
+              {data.items.map((pair, idx) => (
+                <tr
+                  key={`${pair.hadith_a_id}-${pair.hadith_b_id}-${idx}`}
+                  style={{ borderBottom: '1px solid #eee' }}
+                >
+                  <td
+                    style={{ padding: '0.5rem', cursor: 'pointer', color: '#1a73e8' }}
+                    onClick={() => navigate(`/hadiths/${pair.hadith_a_id}`)}
                   >
-                    <td style={{ padding: '0.5rem' }}>{h.id}</td>
-                    <td style={{ padding: '0.5rem' }}>{h.source_corpus}</td>
-                    <td style={{ padding: '0.5rem' }}>{h.grade_composite ?? '-'}</td>
-                    <td style={{ padding: '0.5rem' }}>{h.has_sunni_parallel ? 'Yes' : 'No'}</td>
-                    <td style={{ padding: '0.5rem' }}>{h.has_shia_parallel ? 'Yes' : 'No'}</td>
-                  </tr>
-                ))}
+                    {pair.hadith_a_id}
+                    <br />
+                    <small style={{ color: '#888' }}>{pair.hadith_a_corpus}</small>
+                  </td>
+                  <td
+                    style={{ padding: '0.5rem', cursor: 'pointer', color: '#1a73e8' }}
+                    onClick={() => navigate(`/hadiths/${pair.hadith_b_id}`)}
+                  >
+                    {pair.hadith_b_id}
+                    <br />
+                    <small style={{ color: '#888' }}>{pair.hadith_b_corpus}</small>
+                  </td>
+                  <td style={{ padding: '0.5rem' }}>
+                    {pair.similarity_score != null ? (
+                      <span
+                        style={{
+                          background: pair.similarity_score > 0.8 ? '#e6f4ea' : '#fef7e0',
+                          padding: '0.15rem 0.4rem',
+                          borderRadius: 4,
+                          fontSize: '0.875rem',
+                        }}
+                      >
+                        {(pair.similarity_score * 100).toFixed(1)}%
+                      </span>
+                    ) : (
+                      '-'
+                    )}
+                  </td>
+                  <td style={{ padding: '0.5rem' }}>{pair.variant_type ?? '-'}</td>
+                  <td style={{ padding: '0.5rem' }}>{pair.cross_sect ? 'Yes' : 'No'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
 

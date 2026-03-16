@@ -6,7 +6,9 @@ import type {
   NarratorChainsResponse,
   SearchResultsResponse,
   TimelineResponse,
+  TimelineRangeResponse,
   ParallelsResponse,
+  ParallelPairsResponse,
   NarratorNetworkResponse,
 } from '../types/api'
 
@@ -53,6 +55,13 @@ export async function fetchHadithParallels(id: string): Promise<ParallelsRespons
   return fetchJson(`${API_BASE}/parallels/${encodeURIComponent(id)}`)
 }
 
+export async function fetchParallelPairs(
+  page = 1,
+  limit = 20,
+): Promise<ParallelPairsResponse> {
+  return fetchJson(`${API_BASE}/parallels?page=${page}&limit=${limit}`)
+}
+
 export async function fetchCollections(
   page = 1,
   limit = 20,
@@ -62,6 +71,10 @@ export async function fetchCollections(
 
 export async function fetchCollection(id: string): Promise<Collection> {
   return fetchJson(`${API_BASE}/collections/${encodeURIComponent(id)}`)
+}
+
+export async function fetchTimelineRange(): Promise<TimelineRangeResponse> {
+  return fetchJson(`${API_BASE}/timeline/range`)
 }
 
 export async function fetchTimeline(
