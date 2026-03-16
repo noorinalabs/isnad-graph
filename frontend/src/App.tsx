@@ -2,8 +2,11 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import Layout from './components/Layout'
 import NarratorsPage from './pages/NarratorsPage'
+import NarratorDetailPage from './pages/NarratorDetailPage'
 import HadithsPage from './pages/HadithsPage'
+import HadithDetailPage from './pages/HadithDetailPage'
 import CollectionsPage from './pages/CollectionsPage'
+import CollectionDetailPage from './pages/CollectionDetailPage'
 import SearchPage from './pages/SearchPage'
 import TimelinePage from './pages/TimelinePage'
 import ComparativePage from './pages/ComparativePage'
@@ -29,7 +32,9 @@ export default function App() {
             <Route path="narrators" element={<NarratorsPage />} />
             <Route path="narrators/:id" element={<NarratorDetailPage />} />
             <Route path="hadiths" element={<HadithsPage />} />
+            <Route path="hadiths/:id" element={<HadithDetailPage />} />
             <Route path="collections" element={<CollectionsPage />} />
+            <Route path="collections/:id" element={<CollectionDetailPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="timeline" element={<TimelinePage />} />
             <Route path="compare" element={<ComparativePage />} />
