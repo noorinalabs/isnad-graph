@@ -40,10 +40,23 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    from src.api.routes import collections, hadiths, health, narrators
+    from src.api.routes import (
+        collections,
+        graph,
+        hadiths,
+        health,
+        narrators,
+        parallels,
+        search,
+        timeline,
+    )
 
     app.include_router(health.router, tags=["health"])
     app.include_router(narrators.router, prefix="/api/v1", tags=["narrators"])
     app.include_router(hadiths.router, prefix="/api/v1", tags=["hadiths"])
     app.include_router(collections.router, prefix="/api/v1", tags=["collections"])
+    app.include_router(graph.router, prefix="/api/v1", tags=["graph"])
+    app.include_router(search.router, prefix="/api/v1", tags=["search"])
+    app.include_router(parallels.router, prefix="/api/v1", tags=["parallels"])
+    app.include_router(timeline.router, prefix="/api/v1", tags=["timeline"])
     return app
