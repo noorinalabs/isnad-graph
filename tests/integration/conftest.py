@@ -8,7 +8,6 @@ from testcontainers.postgres import PostgresContainer
 
 from src.utils.neo4j_client import Neo4jClient
 
-
 NEO4J_TEST_PASSWORD = "testpassword123"
 
 
