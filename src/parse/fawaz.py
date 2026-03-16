@@ -2,6 +2,9 @@
 
 Each edition JSON contains ``metadata`` and a ``hadiths`` array.
 Produces ``hadiths_fawaz.parquet`` and ``collections_fawaz.parquet``.
+
+English (eng-*) and Arabic (ara-*) editions are merged by hadith number
+within each collection to produce parallel text records.
 """
 
 from __future__ import annotations
@@ -51,29 +54,45 @@ def _collection_name_from_key(edition_key: str) -> str:
     return parts[1] if len(parts) > 1 else edition_key
 
 
-def _parse_edition(
-    edition_path: Path,
-    info: dict[str, Any],
-) -> tuple[list[dict[str, Any]], dict[str, Any] | None]:
-    """Parse a single edition JSON, returning (hadith_rows, collection_row)."""
+def _load_edition(edition_path: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    """Load an edition JSON, returning (metadata, hadiths)."""
     with open(edition_path) as f:
         data: dict[str, Any] = json.load(f)
+    return data.get("metadata", {}), data.get("hadiths", [])
 
-    metadata: dict[str, Any] = data.get("metadata", {})
-    hadiths: list[dict[str, Any]] = data.get("hadiths", [])
-    edition_key = edition_path.stem  # e.g. "eng-bukhari"
-    collection_name = _collection_name_from_key(edition_key)
-    sect = _detect_sect(edition_key, metadata)
 
-    hadith_rows: list[dict[str, Any]] = []
-    for h in hadiths:
+def _merge_editions(
+    eng_hadiths: list[dict[str, Any]],
+    ara_hadiths: list[dict[str, Any]],
+    collection_name: str,
+    metadata: dict[str, Any],
+    sect: str,
+) -> list[dict[str, Any]]:
+    """Merge English and Arabic hadith lists by hadith number."""
+    # Index Arabic hadiths by number
+    ara_by_number: dict[int | None, dict[str, Any]] = {}
+    for h in ara_hadiths:
+        num = safe_int(h.get("hadithnumber"))
+        ara_by_number[num] = h
+
+    # Track which Arabic hadiths were matched
+    matched_ara_numbers: set[int | None] = set()
+    rows: list[dict[str, Any]] = []
+
+    # Process English hadiths, merging Arabic where available
+    for h in eng_hadiths:
         hadith_number = safe_int(h.get("hadithnumber"))
         source_id = generate_source_id(SOURCE_CORPUS, collection_name, hadith_number or 0)
 
         grades_raw = h.get("grades", [])
         grade_str = json.dumps(grades_raw) if grades_raw else None
 
-        hadith_rows.append(
+        ara_match = ara_by_number.get(hadith_number)
+        matn_ar = ara_match.get("text") if ara_match else None
+        if ara_match:
+            matched_ara_numbers.add(hadith_number)
+
+        rows.append(
             {
                 "source_id": source_id,
                 "source_corpus": SOURCE_CORPUS,
@@ -81,11 +100,11 @@ def _parse_edition(
                 "book_number": None,
                 "chapter_number": None,
                 "hadith_number": hadith_number,
-                "matn_ar": None,
+                "matn_ar": matn_ar,
                 "matn_en": h.get("text"),
                 "isnad_raw_ar": None,
                 "isnad_raw_en": None,
-                "full_text_ar": None,
+                "full_text_ar": matn_ar,
                 "full_text_en": h.get("text"),
                 "grade": grade_str,
                 "chapter_name_ar": None,
@@ -94,25 +113,48 @@ def _parse_edition(
             }
         )
 
-    # Build collection row
-    collection_row: dict[str, Any] | None = None
-    if hadiths:
-        collection_row = {
-            "collection_id": generate_source_id(SOURCE_CORPUS, collection_name),
-            "name_ar": metadata.get("name_ar"),
-            "name_en": metadata.get("name", collection_name),
-            "compiler_name": metadata.get("author"),
-            "compilation_year_ah": None,
-            "sect": sect,
-            "total_hadiths": len(hadiths),
-            "source_corpus": SOURCE_CORPUS,
-        }
+    # Process Arabic-only hadiths (no English counterpart)
+    for h in ara_hadiths:
+        hadith_number = safe_int(h.get("hadithnumber"))
+        if hadith_number in matched_ara_numbers:
+            continue
 
-    return hadith_rows, collection_row
+        logger.warning(
+            "arabic_only_hadith",
+            collection=collection_name,
+            hadith_number=hadith_number,
+        )
+
+        source_id = generate_source_id(SOURCE_CORPUS, collection_name, hadith_number or 0)
+        grades_raw = h.get("grades", [])
+        grade_str = json.dumps(grades_raw) if grades_raw else None
+
+        rows.append(
+            {
+                "source_id": source_id,
+                "source_corpus": SOURCE_CORPUS,
+                "collection_name": collection_name,
+                "book_number": None,
+                "chapter_number": None,
+                "hadith_number": hadith_number,
+                "matn_ar": h.get("text"),
+                "matn_en": None,
+                "isnad_raw_ar": None,
+                "isnad_raw_en": None,
+                "full_text_ar": h.get("text"),
+                "full_text_en": None,
+                "grade": grade_str,
+                "chapter_name_ar": None,
+                "chapter_name_en": None,
+                "sect": sect,
+            }
+        )
+
+    return rows
 
 
 def run(raw_dir: Path, staging_dir: Path) -> tuple[Path, Path]:
-    """Parse all Fawaz English editions into staging Parquet files."""
+    """Parse all Fawaz English + Arabic editions into staging Parquet files."""
     fawaz_dir = raw_dir / "fawaz"
 
     # Load editions catalog for enumeration
@@ -120,33 +162,69 @@ def run(raw_dir: Path, staging_dir: Path) -> tuple[Path, Path]:
     with open(editions_path) as f:
         editions_data: dict[str, Any] = json.load(f)
 
-    # Load info.json for grading metadata
-    info_path = fawaz_dir / "info.json"
-    info: dict[str, Any] = {}
-    if info_path.exists():
-        with open(info_path) as f:
-            info = json.load(f)
-
-    # Filter to English edition keys that have downloaded files
+    # Group edition keys by collection name (e.g. "bukhari" -> ["eng-bukhari", "ara-bukhari"])
     eng_keys = sorted(k for k in editions_data if k.startswith("eng-"))
+    ara_keys_set = {k for k in editions_data if k.startswith("ara-")}
 
     all_hadiths: list[dict[str, Any]] = []
     all_collections: list[dict[str, Any]] = []
 
-    for key in eng_keys:
-        edition_file = fawaz_dir / f"{key}.json"
-        if not edition_file.exists():
-            logger.warning("edition_file_missing", key=key, path=str(edition_file))
+    for eng_key in eng_keys:
+        collection_name = _collection_name_from_key(eng_key)
+        ara_key = f"ara-{collection_name}"
+
+        eng_file = fawaz_dir / f"{eng_key}.json"
+        if not eng_file.exists():
+            logger.warning("edition_file_missing", key=eng_key, path=str(eng_file))
             continue
 
-        hadith_rows, collection_row = _parse_edition(edition_file, info)
+        eng_metadata, eng_hadiths = _load_edition(eng_file)
+        sect = _detect_sect(eng_key, eng_metadata)
+
+        # Load Arabic edition if available
+        ara_hadiths: list[dict[str, Any]] = []
+        ara_file = fawaz_dir / f"{ara_key}.json"
+        if ara_key in ara_keys_set and ara_file.exists():
+            _, ara_hadiths = _load_edition(ara_file)
+            logger.info(
+                "arabic_edition_loaded",
+                key=ara_key,
+                hadiths=len(ara_hadiths),
+            )
+        else:
+            logger.warning("arabic_edition_missing", collection=collection_name)
+
+        # Log English hadiths that have no Arabic match
+        if ara_hadiths:
+            ara_numbers = {safe_int(h.get("hadithnumber")) for h in ara_hadiths}
+            for h in eng_hadiths:
+                num = safe_int(h.get("hadithnumber"))
+                if num not in ara_numbers:
+                    logger.warning(
+                        "english_only_hadith",
+                        collection=collection_name,
+                        hadith_number=num,
+                    )
+
+        hadith_rows = _merge_editions(eng_hadiths, ara_hadiths, collection_name, eng_metadata, sect)
         all_hadiths.extend(hadith_rows)
-        if collection_row is not None:
+
+        if eng_hadiths or ara_hadiths:
+            collection_row = {
+                "collection_id": generate_source_id(SOURCE_CORPUS, collection_name),
+                "name_ar": eng_metadata.get("name_ar"),
+                "name_en": eng_metadata.get("name", collection_name),
+                "compiler_name": eng_metadata.get("author"),
+                "compilation_year_ah": None,
+                "sect": sect,
+                "total_hadiths": len(hadith_rows),
+                "source_corpus": SOURCE_CORPUS,
+            }
             all_collections.append(collection_row)
 
         logger.info(
             "edition_parsed",
-            key=key,
+            key=eng_key,
             hadiths=len(hadith_rows),
         )
 
