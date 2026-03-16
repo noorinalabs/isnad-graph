@@ -57,9 +57,7 @@ def list_users(
         for r in records
     ]
 
-    return PaginatedResponse[UserAdminResponse](
-        items=items, total=total, page=page, limit=limit
-    )
+    return PaginatedResponse[UserAdminResponse](items=items, total=total, page=page, limit=limit)
 
 
 @router.get("/{user_id}", response_model=UserAdminResponse)

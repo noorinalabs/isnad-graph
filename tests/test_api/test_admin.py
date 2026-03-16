@@ -202,9 +202,7 @@ class TestAdminUsers:
         assert data["items"] == []
         assert data["total"] == 0
 
-    def test_list_users_with_results(
-        self, admin_client: TestClient, mock_neo4j: MagicMock
-    ) -> None:
+    def test_list_users_with_results(self, admin_client: TestClient, mock_neo4j: MagicMock) -> None:
         mock_neo4j.execute_read.side_effect = [
             [{"total": 1}],
             [
@@ -229,9 +227,7 @@ class TestAdminUsers:
         assert len(data["items"]) == 1
         assert data["items"][0]["email"] == "a@b.com"
 
-    def test_get_user_not_found(
-        self, admin_client: TestClient, mock_neo4j: MagicMock
-    ) -> None:
+    def test_get_user_not_found(self, admin_client: TestClient, mock_neo4j: MagicMock) -> None:
         mock_neo4j.execute_read.return_value = []
         resp = admin_client.get("/api/v1/admin/users/nonexistent")
         assert resp.status_code == 404
@@ -255,9 +251,7 @@ class TestAdminUsers:
         assert resp.status_code == 200
         assert resp.json()["id"] == "u1"
 
-    def test_update_user(
-        self, admin_client: TestClient, mock_neo4j: MagicMock
-    ) -> None:
+    def test_update_user(self, admin_client: TestClient, mock_neo4j: MagicMock) -> None:
         mock_neo4j.execute_write.return_value = [
             {
                 "u": {
@@ -282,13 +276,9 @@ class TestAdminUsers:
         resp = admin_client.patch("/api/v1/admin/users/u1", json={})
         assert resp.status_code == 400
 
-    def test_update_user_not_found(
-        self, admin_client: TestClient, mock_neo4j: MagicMock
-    ) -> None:
+    def test_update_user_not_found(self, admin_client: TestClient, mock_neo4j: MagicMock) -> None:
         mock_neo4j.execute_write.return_value = []
-        resp = admin_client.patch(
-            "/api/v1/admin/users/nonexistent", json={"is_admin": True}
-        )
+        resp = admin_client.patch("/api/v1/admin/users/nonexistent", json={"is_admin": True})
         assert resp.status_code == 404
 
 
