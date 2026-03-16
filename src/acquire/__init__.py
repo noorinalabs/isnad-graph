@@ -10,7 +10,15 @@ from __future__ import annotations
 from pathlib import Path
 from types import ModuleType
 
-from src.acquire import fawaz, lk_corpus, muhaddithat, open_hadith, sunnah_api, thaqalayn
+from src.acquire import (
+    fawaz,
+    lk_corpus,
+    muhaddithat,
+    open_hadith,
+    sunnah_api,
+    sunnah_scraper,
+    thaqalayn,
+)
 from src.acquire.sanadset import download_sanadset
 from src.utils.logging import get_logger
 
@@ -24,6 +32,7 @@ SOURCES: list[tuple[str, ModuleType | None]] = [
     ("thaqalayn", thaqalayn),
     ("fawaz", fawaz),
     ("sunnah", sunnah_api),
+    ("sunnah_scraped", sunnah_scraper),
     ("open_hadith", open_hadith),
     ("muhaddithat", muhaddithat),
 ]
