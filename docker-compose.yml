@@ -58,6 +58,16 @@ services:
     command: uvicorn src.api.app:create_app --factory --host 0.0.0.0 --port 8000
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    networks:
+      - isnad-net
+    restart: unless-stopped
+
 networks:
   isnad-net:
     driver: bridge
