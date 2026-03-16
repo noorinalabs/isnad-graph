@@ -5,6 +5,7 @@ erDiagram
         string name_en
         string kunya
         string nisba
+        string laqab
         int birth_year_ah
         int death_year_ah
         string birth_location
@@ -13,7 +14,10 @@ erDiagram
         string gender
         string sect_affiliation
         string tabaqat_class
-        string trustworthiness
+        string trustworthiness_consensus
+        float betweenness_centrality
+        float pagerank
+        int community_id
     }
     HADITH {
         string id PK
@@ -23,6 +27,7 @@ erDiagram
         string isnad_raw_en
         string grade_composite
         string topic_tags
+        string source_corpus
         bool has_shia_parallel
         bool has_sunni_parallel
     }
@@ -30,10 +35,11 @@ erDiagram
         string id PK
         string name_ar
         string name_en
-        string compiler
+        string compiler_name
         int compilation_year_ah
         string sect
         int canonical_rank
+        int book_count
     }
     GRADING {
         string id PK
@@ -58,14 +64,15 @@ erDiagram
         int position
         string transmission_method
     }
-    HISTORICAL_CONTEXT {
+    HISTORICAL_EVENT {
         string id PK
-        string event_name
+        string name
+        string name_ar
         int year_ah
-        int year_ce
+        int end_year_ah
+        string event_type
         string caliphate
         string region
-        string type
     }
     LOCATION {
         string id PK
@@ -75,12 +82,13 @@ erDiagram
         float lon
     }
 
-    NARRATOR ||--o{ CHAIN_LINK : "transmits_in"
+    NARRATOR ||--o{ CHAIN_LINK : "TRANSMITTED_TO"
     CHAIN_LINK }o--|| CHAIN : "belongs_to"
     CHAIN }o--|| HADITH : "authenticates"
-    HADITH }o--o{ COLLECTION : "appears_in"
+    HADITH }o--o{ COLLECTION : "APPEARS_IN"
     HADITH ||--o{ GRADING : "graded_by"
-    NARRATOR }o--o{ NARRATOR : "studied_under"
-    NARRATOR }o--o{ LOCATION : "based_in"
-    NARRATOR }o--o{ HISTORICAL_CONTEXT : "active_during"
-    HADITH }o--o{ HADITH : "parallel_of"
+    NARRATOR }o--o{ NARRATOR : "STUDIED_UNDER"
+    NARRATOR ||--o{ HADITH : "NARRATED"
+    NARRATOR }o--o{ LOCATION : "BASED_IN"
+    NARRATOR }o--o{ HISTORICAL_EVENT : "ACTIVE_DURING"
+    HADITH }o--o{ HADITH : "PARALLEL_OF"
