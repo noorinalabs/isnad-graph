@@ -53,8 +53,11 @@ export async function fetchHadithParallels(id: string): Promise<ParallelsRespons
   return fetchJson(`${API_BASE}/parallels/${encodeURIComponent(id)}`)
 }
 
-export async function fetchCollections(): Promise<Collection[]> {
-  return fetchJson(`${API_BASE}/collections`)
+export async function fetchCollections(
+  page = 1,
+  limit = 20,
+): Promise<PaginatedResponse<Collection>> {
+  return fetchJson(`${API_BASE}/collections?page=${page}&limit=${limit}`)
 }
 
 export async function fetchCollection(id: string): Promise<Collection> {

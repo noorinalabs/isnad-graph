@@ -41,7 +41,7 @@ export default function CollectionsPage() {
             </tr>
           </thead>
           <tbody>
-            {data.map((c) => (
+            {data.items.map((c) => (
               <tr
                 key={c.id}
                 onClick={() => navigate(`/collections/${c.id}`)}

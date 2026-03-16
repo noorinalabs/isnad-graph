@@ -52,6 +52,12 @@ export interface Collection {
   book_count: number | null
 }
 
+export interface Chain {
+  id: string
+  hadith_id: string
+  is_complete: boolean
+}
+
 export interface ChainSummary {
   chain_id: string
   hadith_id: string
