@@ -82,3 +82,153 @@ class HealthResponse(BaseModel):
 
     status: str
     neo4j_connected: bool
+
+
+# --- Graph visualization models ---
+
+
+class GraphNode(BaseModel):
+    """A node in graph visualization data."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    label: str
+    name_ar: str
+    name_en: str | None = None
+    type: str
+    generation: str | None = None
+
+
+class GraphEdge(BaseModel):
+    """An edge in graph visualization data."""
+
+    model_config = ConfigDict(frozen=True)
+
+    source: str
+    target: str
+    relationship: str
+
+
+class ChainSummary(BaseModel):
+    """Summary of a chain passing through a narrator."""
+
+    model_config = ConfigDict(frozen=True)
+
+    chain_id: str
+    hadith_id: str
+    matn_ar: str
+    matn_en: str | None = None
+    grade: str | None = None
+
+
+class NarratorChainsResponse(BaseModel):
+    """Response for narrator chains endpoint."""
+
+    model_config = ConfigDict(frozen=True)
+
+    narrator_id: str
+    chains: list[ChainSummary]
+    total: int
+
+
+class ChainVisualization(BaseModel):
+    """Full chain visualization data for D3/vis.js rendering."""
+
+    model_config = ConfigDict(frozen=True)
+
+    hadith_id: str
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+
+
+class NarratorNetworkResponse(BaseModel):
+    """Ego network response with nodes and edges."""
+
+    model_config = ConfigDict(frozen=True)
+
+    narrator_id: str
+    nodes: list[GraphNode]
+    edges: list[GraphEdge]
+    teachers: int
+    students: int
+
+
+# --- Search models ---
+
+
+class SearchResult(BaseModel):
+    """A single search result."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    type: str
+    title: str
+    title_ar: str
+    score: float
+
+
+class SearchResultsResponse(BaseModel):
+    """Search results response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    results: list[SearchResult]
+    total: int
+    query: str
+
+
+# --- Parallels models ---
+
+
+class ParallelHadithResponse(BaseModel):
+    """A parallel hadith with similarity metadata."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    matn_ar: str
+    matn_en: str | None = None
+    source_corpus: str
+    grade: str | None = None
+    similarity_score: float | None = None
+    variant_type: str | None = None
+    cross_sect: bool = False
+
+
+class ParallelsResponse(BaseModel):
+    """Response for parallels endpoint."""
+
+    model_config = ConfigDict(frozen=True)
+
+    hadith_id: str
+    parallels: list[ParallelHadithResponse]
+    total: int
+
+
+# --- Timeline models ---
+
+
+class TimelineEntry(BaseModel):
+    """A historical event entry for timeline visualization."""
+
+    model_config = ConfigDict(frozen=True)
+
+    id: str
+    name: str
+    name_ar: str | None = None
+    year_ah: int
+    end_year_ah: int | None = None
+    event_type: str | None = None
+    description: str | None = None
+    narrator_count: int = 0
+
+
+class TimelineResponse(BaseModel):
+    """Timeline data response."""
+
+    model_config = ConfigDict(frozen=True)
+
+    entries: list[TimelineEntry]
+    total: int

@@ -9,6 +9,9 @@ import CollectionsPage from './pages/CollectionsPage'
 import CollectionDetailPage from './pages/CollectionDetailPage'
 import SearchPage from './pages/SearchPage'
 import TimelinePage from './pages/TimelinePage'
+import ComparativePage from './pages/ComparativePage'
+import GraphExplorerPage from './pages/GraphExplorerPage'
+import NarratorDetailPage from './pages/NarratorDetailPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +37,8 @@ export default function App() {
             <Route path="collections/:id" element={<CollectionDetailPage />} />
             <Route path="search" element={<SearchPage />} />
             <Route path="timeline" element={<TimelinePage />} />
+            <Route path="compare" element={<ComparativePage />} />
+            <Route path="graph" element={<GraphExplorerPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

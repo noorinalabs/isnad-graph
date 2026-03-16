@@ -5,6 +5,9 @@ import type {
   Collection,
   Chain,
   SearchResult,
+  TimelineEvent,
+  ParallelPair,
+  GraphNetwork,
 } from '../types/api'
 
 const API_BASE = '/api/v1'
@@ -68,6 +71,35 @@ export async function fetchCollectionHadiths(
 ): Promise<PaginatedResponse<Hadith>> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   return fetchJson(`${API_BASE}/collections/${encodeURIComponent(id)}/hadiths?${params}`)
+}
+
+export async function fetchTimeline(
+  yearStart?: number,
+  yearEnd?: number,
+): Promise<TimelineEvent[]> {
+  const params = new URLSearchParams()
+  if (yearStart != null) params.set('year_start', String(yearStart))
+  if (yearEnd != null) params.set('year_end', String(yearEnd))
+  const qs = params.toString()
+  return fetchJson(`${API_BASE}/timeline${qs ? `?${qs}` : ''}`)
+}
+
+export async function fetchParallels(
+  page = 1,
+  limit = 20,
+): Promise<PaginatedResponse<ParallelPair>> {
+  return fetchJson(`${API_BASE}/parallels?page=${page}&limit=${limit}`)
+}
+
+export async function fetchGraphNetwork(
+  narratorId: string,
+  depth = 1,
+): Promise<GraphNetwork> {
+  const params = new URLSearchParams({
+    narrator_id: narratorId,
+    depth: String(depth),
+  })
+  return fetchJson(`${API_BASE}/graph/network?${params}`)
 }
 
 export async function searchAll(

@@ -66,3 +66,36 @@ export interface SearchResult {
   label: string
   snippet: string
 }
+
+export interface TimelineEvent {
+  id: string
+  name: string
+  year_start: number
+  year_end: number | null
+  description: string | null
+  narrators: { id: string; name: string }[]
+}
+
+export interface ParallelPair {
+  sunni_hadith: Hadith
+  shia_hadith: Hadith
+  similarity_score: number
+}
+
+export interface GraphNode {
+  id: string
+  label: string
+  community_id: number | null
+  type: 'narrator' | 'hadith'
+}
+
+export interface GraphEdge {
+  source: string
+  target: string
+  relationship: string
+}
+
+export interface GraphNetwork {
+  nodes: GraphNode[]
+  edges: GraphEdge[]
+}

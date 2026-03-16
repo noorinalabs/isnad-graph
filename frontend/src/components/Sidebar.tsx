@@ -6,6 +6,8 @@ const navItems = [
   { to: '/collections', label: 'Collections' },
   { to: '/search', label: 'Search' },
   { to: '/timeline', label: 'Timeline' },
+  { to: '/compare', label: 'Compare' },
+  { to: '/graph', label: 'Graph Explorer' },
 ]
 
 export default function Sidebar() {
