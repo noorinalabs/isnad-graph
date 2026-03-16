@@ -19,7 +19,33 @@ class PaginatedResponse[T](BaseModel):
 class NarratorResponse(BaseModel):
     """Narrator API response."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "narrator:bukhari:az-zuhri",
+                    "name_ar": "محمد بن مسلم بن شهاب الزهري",
+                    "name_en": "Ibn Shihab al-Zuhri",
+                    "kunya": "Abu Bakr",
+                    "nisba": "al-Zuhri",
+                    "laqab": None,
+                    "birth_year_ah": 51,
+                    "death_year_ah": 124,
+                    "generation": "tabi_tabiin",
+                    "gender": "male",
+                    "sect_affiliation": "sunni",
+                    "trustworthiness_consensus": "thiqa",
+                    "aliases": ["الزهري", "ابن شهاب"],
+                    "betweenness_centrality": 0.042,
+                    "in_degree": 87,
+                    "out_degree": 134,
+                    "pagerank": 0.0031,
+                    "community_id": 3,
+                }
+            ]
+        },
+    )
 
     id: str
     name_ar: str
@@ -44,7 +70,25 @@ class NarratorResponse(BaseModel):
 class HadithResponse(BaseModel):
     """Hadith API response."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "id": "hadith:bukhari:1",
+                    "matn_ar": "إنما الأعمال بالنيات",
+                    "matn_en": "Actions are judged by intentions.",
+                    "isnad_raw_ar": "حدثنا الحميدي...",
+                    "isnad_raw_en": None,
+                    "grade_composite": "sahih",
+                    "topic_tags": ["intentions", "sincerity"],
+                    "source_corpus": "bukhari",
+                    "has_shia_parallel": True,
+                    "has_sunni_parallel": True,
+                }
+            ]
+        },
+    )
 
     id: str
     matn_ar: str
@@ -78,7 +122,12 @@ class CollectionResponse(BaseModel):
 class HealthResponse(BaseModel):
     """Health check response."""
 
-    model_config = ConfigDict(frozen=True)
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [{"status": "ok", "neo4j_connected": True}]
+        },
+    )
 
     status: str
     neo4j_connected: bool

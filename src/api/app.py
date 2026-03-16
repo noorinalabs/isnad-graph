@@ -32,6 +32,85 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.neo4j.close()
 
 
+OPENAPI_TAGS = [
+    {
+        "name": "health",
+        "description": "Health and readiness checks.",
+    },
+    {
+        "name": "auth",
+        "description": "OAuth login, token refresh, logout, and user profile.",
+    },
+    {
+        "name": "2fa",
+        "description": "Two-factor authentication enrollment and verification.",
+    },
+    {
+        "name": "narrators",
+        "description": "Look up narrators, their biographies, chains, and ego-networks.",
+    },
+    {
+        "name": "hadiths",
+        "description": "Retrieve individual hadiths and their chain visualizations.",
+    },
+    {
+        "name": "collections",
+        "description": "Browse hadith collections (Sunni and Shia).",
+    },
+    {
+        "name": "graph",
+        "description": "Raw graph queries — shortest paths, subgraphs, community detection.",
+    },
+    {
+        "name": "search",
+        "description": "Full-text and semantic search across narrators and hadiths.",
+    },
+    {
+        "name": "parallels",
+        "description": "Cross-collection and cross-sectarian parallel hadith detection.",
+    },
+    {
+        "name": "timeline",
+        "description": "Historical timeline data for narrator activity and events.",
+    },
+]
+
+API_DESCRIPTION = """\
+# isnad-graph API
+
+Computational hadith analysis platform providing access to a Neo4j-backed graph
+of Sunni and Shia hadith collections, narrator networks, and isnad (chain of
+narration) analysis.
+
+## Authentication
+
+All endpoints except `/health` and `/api/v1/auth/*` require a valid JWT bearer
+token. Obtain one via the OAuth login flow:
+
+1. `POST /api/v1/auth/login/{provider}` — get the provider's authorization URL
+2. Browser redirect → provider consent screen → callback
+3. `GET /api/v1/auth/callback/{provider}` — exchange code for access + refresh tokens
+4. Include `Authorization: Bearer <access_token>` on subsequent requests
+5. `POST /api/v1/auth/refresh` — rotate tokens before expiry
+
+Supported providers: **Google**, **Apple**, **Facebook**, **GitHub**.
+
+## Rate Limiting
+
+All endpoints are rate-limited to **120 requests/minute** per client IP.
+Exceeding the limit returns `429 Too Many Requests` with a `Retry-After` header.
+
+## Error Format
+
+```json
+{"detail": "Human-readable error message"}
+```
+
+Standard HTTP status codes: `400` bad request, `401` unauthorized,
+`404` not found, `413` body too large, `429` rate limited, `500` server error.
+"""
+
+
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
     from src.config import get_settings
@@ -39,9 +118,10 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title="isnad-graph API",
-        description="Computational Hadith Analysis Platform",
+        description=API_DESCRIPTION,
         version="0.1.0",
         lifespan=lifespan,
+        openapi_tags=OPENAPI_TAGS,
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware, max_body_size=1_048_576)
