@@ -1,23 +1,39 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import * as d3 from 'd3'
-import { fetchTimeline } from '../api/client'
+import { fetchTimeline, fetchTimelineRange } from '../api/client'
 import type { TimelineEntry } from '../types/api'
 
 const MARGIN = { top: 30, right: 30, bottom: 40, left: 60 }
+const DEFAULT_RANGE: [number, number] = [0, 300]
 
 export default function TimelinePage() {
   const svgRef = useRef<SVGSVGElement | null>(null)
   const [selectedEvent, setSelectedEvent] = useState<TimelineEntry | null>(null)
-  const [yearRange, setYearRange] = useState<[number, number]>([0, 300])
+  const [yearRange, setYearRange] = useState<[number, number] | null>(null)
+
+  const { data: rangeData } = useQuery({
+    queryKey: ['timeline-range'],
+    queryFn: fetchTimelineRange,
+    staleTime: 5 * 60 * 1000,
+  })
+
+  // Set year range from data once loaded
+  useEffect(() => {
+    if (rangeData && yearRange === null) {
+      setYearRange([rangeData.min_year_ah, rangeData.max_year_ah])
+    }
+  }, [rangeData, yearRange])
+
+  const effectiveRange = yearRange ?? (rangeData ? [rangeData.min_year_ah, rangeData.max_year_ah] : DEFAULT_RANGE) as [number, number]
 
   const {
     data: timelineData,
     isLoading,
     error,
   } = useQuery({
-    queryKey: ['timeline', yearRange[0], yearRange[1]],
-    queryFn: () => fetchTimeline(yearRange[0], yearRange[1]),
+    queryKey: ['timeline', effectiveRange[0], effectiveRange[1]],
+    queryFn: () => fetchTimeline(effectiveRange[0], effectiveRange[1]),
   })
 
   const events = timelineData?.entries
@@ -102,8 +118,8 @@ export default function TimelinePage() {
           From (AH):{' '}
           <input
             type="number"
-            value={yearRange[0]}
-            onChange={(e) => setYearRange([Number(e.target.value), yearRange[1]])}
+            value={effectiveRange[0]}
+            onChange={(e) => setYearRange([Number(e.target.value), effectiveRange[1]])}
             style={{ width: 80, padding: '0.25rem' }}
           />
         </label>
@@ -111,8 +127,8 @@ export default function TimelinePage() {
           To (AH):{' '}
           <input
             type="number"
-            value={yearRange[1]}
-            onChange={(e) => setYearRange([yearRange[0], Number(e.target.value)])}
+            value={effectiveRange[1]}
+            onChange={(e) => setYearRange([effectiveRange[0], Number(e.target.value)])}
             style={{ width: 80, padding: '0.25rem' }}
           />
         </label>
