@@ -15,32 +15,33 @@ router = APIRouter()
 def get_timeline(
     start_year: int | None = Query(None, description="Start year AH (inclusive)"),
     end_year: int | None = Query(None, description="End year AH (inclusive)"),
+    page: int = Query(1, ge=1, description="Page number"),
+    limit: int = Query(100, ge=1, le=500, description="Items per page"),
     neo4j: Neo4jClient = Depends(get_neo4j),
 ) -> TimelineResponse:
     """Return historical events with narrator counts per period for timeline visualization."""
-    where_clauses: list[str] = []
-    params: dict[str, int] = {}
-    if start_year is not None:
-        where_clauses.append("e.year_ah >= $start_year")
-        params["start_year"] = start_year
-    if end_year is not None:
-        where_clauses.append("e.year_ah <= $end_year")
-        params["end_year"] = end_year
-
-    where = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    skip = (page - 1) * limit
 
     rows = neo4j.execute_read(
-        f"""
+        """
         MATCH (e:HistoricalEvent)
-        {where}
+        WHERE ($start_year IS NULL OR e.year_ah >= $start_year)
+          AND ($end_year IS NULL OR e.year_ah <= $end_year)
         OPTIONAL MATCH (n:Narrator)-[:ACTIVE_DURING]->(e)
         RETURN e.id AS id, e.name AS name, e.name_ar AS name_ar,
                e.year_ah AS year_ah, e.end_year_ah AS end_year_ah,
                e.event_type AS event_type, e.description AS description,
                count(DISTINCT n) AS narrator_count
         ORDER BY e.year_ah
+        SKIP $skip
+        LIMIT $limit
         """,
-        params,
+        {
+            "start_year": start_year,
+            "end_year": end_year,
+            "skip": skip,
+            "limit": limit,
+        },
     )
 
     entries = [

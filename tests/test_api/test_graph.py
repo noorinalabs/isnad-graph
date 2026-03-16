@@ -77,30 +77,32 @@ def test_narrator_network_found(client: TestClient, mock_neo4j: MagicMock) -> No
     mock_neo4j.execute_read.side_effect = [
         # exists check
         [{"id": "nar-001"}],
-        # network row
+        # student rows
+        [
+            {
+                "id": "nar-020",
+                "name_ar": "الطالب",
+                "name_en": "Student",
+                "gen": "successor",
+                "rel": "student",
+            }
+        ],
+        # teacher rows
+        [
+            {
+                "id": "nar-010",
+                "name_ar": "المعلم",
+                "name_en": "Teacher",
+                "gen": "companion",
+                "rel": "teacher",
+            }
+        ],
+        # center row
         [
             {
                 "center_name_ar": "الراوي المركزي",
                 "center_name_en": "Central Narrator",
                 "center_gen": "companion",
-                "teachers": [
-                    {
-                        "id": "nar-010",
-                        "name_ar": "المعلم",
-                        "name_en": "Teacher",
-                        "gen": "companion",
-                        "rel": "teacher",
-                    }
-                ],
-                "students": [
-                    {
-                        "id": "nar-020",
-                        "name_ar": "الطالب",
-                        "name_en": "Student",
-                        "gen": "successor",
-                        "rel": "student",
-                    }
-                ],
             }
         ],
     ]
