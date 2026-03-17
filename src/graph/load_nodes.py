@@ -593,6 +593,7 @@ def load_all_nodes(
     in dependency order (narrators before chains, hadiths before gradings).
     """
     client.ensure_constraints()
+    client.ensure_fulltext_indexes()
 
     results: list[LoadResult] = []
     results.append(_load_narrators(client, staging_dir, curated_dir, strict=strict))

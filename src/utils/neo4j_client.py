@@ -115,6 +115,24 @@ class Neo4jClient:
             self.execute_write(query)
             log.info("constraint_ensured", node_type=node_type)
 
+    def ensure_fulltext_indexes(self) -> None:
+        """Create full-text indexes for search (idempotent)."""
+        indexes = [
+            (
+                "narrator_search",
+                "CREATE FULLTEXT INDEX narrator_search IF NOT EXISTS "
+                "FOR (n:Narrator) ON EACH [n.name_ar, n.name_en]",
+            ),
+            (
+                "hadith_search",
+                "CREATE FULLTEXT INDEX hadith_search IF NOT EXISTS "
+                "FOR (h:Hadith) ON EACH [h.matn_ar, h.matn_en]",
+            ),
+        ]
+        for name, query in indexes:
+            self.execute_write(query)
+            log.info("fulltext_index_ensured", index=name)
+
     # --- lifecycle -------------------------------------------------------
 
     def close(self) -> None:

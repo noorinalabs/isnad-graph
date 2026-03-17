@@ -24,11 +24,15 @@ class MockNeo4jClient:
     def __init__(self, *, nodes_created_per_batch: int = 0) -> None:
         self.calls: list[tuple[str, dict[str, Any] | list[dict[str, Any]]]] = []
         self.constraints_ensured = False
+        self.fulltext_indexes_ensured = False
         self._nodes_created = nodes_created_per_batch
         self._read_results: list[dict[str, Any]] = []
 
     def ensure_constraints(self) -> None:
         self.constraints_ensured = True
+
+    def ensure_fulltext_indexes(self) -> None:
+        self.fulltext_indexes_ensured = True
 
     def execute_write_batch(
         self, query: str, batch: list[dict[str, Any]], batch_size: int = 1000
