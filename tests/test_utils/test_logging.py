@@ -11,9 +11,7 @@ import structlog
 from src.utils.logging import SERVICE_NAME, _add_service_name, configure_logging, get_logger
 
 
-def _make_json_logger(
-    buf: io.StringIO, level: int = logging.DEBUG
-) -> structlog.stdlib.BoundLogger:
+def _make_json_logger(buf: io.StringIO, level: int = logging.DEBUG) -> structlog.stdlib.BoundLogger:
     """Configure structlog to write JSON into *buf* and return a fresh logger.
 
     Bypasses ``cache_logger_on_first_use`` so tests get the exact
@@ -103,9 +101,7 @@ class TestConfigureLogging:
     def test_log_level_configurable(self) -> None:
         """Setting level to WARNING should suppress INFO messages."""
         buf = io.StringIO()
-        logger = _make_json_logger(buf, level=logging.WARNING).bind(
-            logger_name="test.level"
-        )
+        logger = _make_json_logger(buf, level=logging.WARNING).bind(logger_name="test.level")
         logger.info("should_not_appear")
         logger.warning("should_appear")
 
