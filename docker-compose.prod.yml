@@ -1,3 +1,13 @@
+# Production Docker Compose — hardened configuration
+# Usage: docker compose -f docker-compose.prod.yml up -d
+#
+# Network segmentation:
+#   - backend: internal network for Neo4j, PostgreSQL, Redis, API
+#   - frontend: public-facing network for API and frontend only
+#
+# All services have resource limits, health checks, restart policies,
+# JSON logging with rotation, and named volumes for persistence.
+
 services:
   neo4j:
     image: neo4j:5-community
@@ -5,7 +15,7 @@ services:
       - "7474:7474"
       - "7687:7687"
     environment:
-      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:?NEO4J_PASSWORD required}
+      NEO4J_AUTH: "${NEO4J_USER:?NEO4J_USER must be set}/${NEO4J_PASSWORD:?NEO4J_PASSWORD must be set}"
       NEO4J_PLUGINS: '["apoc", "graph-data-science"]'
       NEO4J_server_memory_heap_max__size: 4G
       NEO4J_server_memory_pagecache_size: 2G
@@ -14,80 +24,116 @@ services:
       NEO4J_server_metrics_prometheus_endpoint: "0.0.0.0:2004"
     volumes:
       - neo4j_data:/data
+      - neo4j_logs:/logs
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:7474 || exit 1"]
-      interval: 10s
-      timeout: 5s
+      interval: 15s
+      timeout: 10s
       retries: 5
-    networks:
-      - backend
-    restart: unless-stopped
+      start_period: 30s
     deploy:
       resources:
         limits:
-          memory: 6G
+          memory: 8G
+          cpus: "4.0"
+        reservations:
+          memory: 4G
           cpus: "2.0"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+    restart: unless-stopped
 
   postgres:
     image: pgvector/pgvector:pg16
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-isnad_graph}
-      POSTGRES_USER: ${POSTGRES_USER:-isnad}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
+      POSTGRES_DB: "${POSTGRES_DB:?POSTGRES_DB must be set}"
+      POSTGRES_USER: "${POSTGRES_USER:?POSTGRES_USER must be set}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-isnad}"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-    networks:
-      - backend
-    restart: unless-stopped
+      start_period: 15s
     deploy:
       resources:
         limits:
-          memory: 2G
-          cpus: "1.0"
+          memory: 4G
+          cpus: "2.0"
+        reservations:
+          memory: 1G
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
     ports:
-      - "6379:6379"
-    command: redis-server --requirepass ${REDIS_PASSWORD:?REDIS_PASSWORD required}
+      - "127.0.0.1:6379:6379"
+    command: redis-server --maxmemory 512mb --maxmemory-policy allkeys-lru --requirepass "${REDIS_PASSWORD:?REDIS_PASSWORD must be set}"
+    read_only: true
     volumes:
       - redis_data:/data
+    tmpfs:
+      - /tmp:size=64M
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-    networks:
-      - backend
-    restart: unless-stopped
+      start_period: 5s
     deploy:
       resources:
         limits:
-          memory: 512M
-          cpus: "0.5"
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - backend
+    restart: unless-stopped
 
   api:
     build: .
     ports:
       - "8000:8000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=256M
+      - /app/.cache:size=128M
     environment:
       - NEO4J_URI=bolt://neo4j:7687
-      - NEO4J_USER=${NEO4J_USER:-neo4j}
-      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD required}
-      - PG_DSN=postgresql://${POSTGRES_USER:-isnad}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-isnad_graph}
-      - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379/0
+      - NEO4J_USER=${NEO4J_USER:?NEO4J_USER must be set}
+      - NEO4J_PASSWORD=${NEO4J_PASSWORD:?NEO4J_PASSWORD must be set}
+      - PG_DSN=postgresql://${POSTGRES_USER:?POSTGRES_USER must be set}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:?REDIS_PASSWORD must be set}@redis:6379/0
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
       retries: 5
+      start_period: 20s
     depends_on:
       neo4j:
         condition: service_healthy
@@ -95,30 +141,62 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    networks:
-      - backend
-    command: uv run uvicorn src.api.app:create_app --factory --host 0.0.0.0 --port 8000
-    restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 1G
-          cpus: "1.0"
+          memory: 2G
+          cpus: "2.0"
+        reservations:
+          memory: 512M
+          cpus: "0.5"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - backend
+      - frontend
+    command: uv run uvicorn src.api.app:create_app --factory --host 0.0.0.0 --port 8000 --workers 4
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
-    networks:
-      - backend
-    restart: unless-stopped
+      - "80:80"
+      - "443:443"
+    read_only: true
+    tmpfs:
+      - /tmp:size=64M
+      - /var/cache/nginx:size=128M
+      - /run:size=16M
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:80/ || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
     deploy:
       resources:
         limits:
-          memory: 256M
-          cpus: "0.5"
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - frontend
+    restart: unless-stopped
 
   # --- Observability ---
 
@@ -207,7 +285,7 @@ services:
   postgres-exporter:
     image: quay.io/prometheuscommunity/postgres-exporter:v0.16.0
     environment:
-      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:-isnad}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-isnad_graph}?sslmode=disable"
+      DATA_SOURCE_NAME: "postgresql://${POSTGRES_USER:?POSTGRES_USER must be set}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set}@postgres:5432/${POSTGRES_DB:?POSTGRES_DB must be set}?sslmode=disable"
     ports:
       - "9187:9187"
     healthcheck:
@@ -230,9 +308,13 @@ services:
 networks:
   backend:
     driver: bridge
+    internal: true
+  frontend:
+    driver: bridge
 
 volumes:
   neo4j_data:
+  neo4j_logs:
   pg_data:
   redis_data:
   prometheus_data:
