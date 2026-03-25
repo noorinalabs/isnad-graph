@@ -110,8 +110,8 @@ services:
 
   api:
     build: .
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     environment:
       - NEO4J_URI=bolt://neo4j:7687
       - NEO4J_USER=${NEO4J_USER:-neo4j}
@@ -154,9 +154,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    ports:
-      - "80:80"
-      - "443:443"
+    expose:
+      - "80"
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:80/ || exit 1"]
       interval: 15s
@@ -183,6 +182,43 @@ services:
       - frontend
     restart: unless-stopped
 
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "caddy", "validate", "--config", "/etc/caddy/Caddyfile"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: "0.5"
+        reservations:
+          memory: 64M
+          cpus: "0.1"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+    networks:
+      - frontend
+    restart: unless-stopped
+
 networks:
   backend:
     driver: bridge
@@ -195,3 +231,5 @@ volumes:
   neo4j_logs:
   pg_data:
   redis_data:
+  caddy_data:
+  caddy_config:
