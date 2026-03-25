@@ -2,12 +2,38 @@
 
 from __future__ import annotations
 
+import io
 import json
+import logging
 
-import pytest
 import structlog
 
 from src.utils.logging import SERVICE_NAME, _add_service_name, configure_logging, get_logger
+
+
+def _make_json_logger(
+    buf: io.StringIO, level: int = logging.DEBUG
+) -> structlog.stdlib.BoundLogger:
+    """Configure structlog to write JSON into *buf* and return a fresh logger.
+
+    Bypasses ``cache_logger_on_first_use`` so tests get the exact
+    configuration they request, regardless of what the module-level
+    ``configure_logging()`` call cached at import time.
+    """
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            _add_service_name,
+            structlog.processors.TimeStamper(fmt="iso", utc=True),
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(level),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(file=buf),
+        cache_logger_on_first_use=False,
+    )
+    return structlog.get_logger()  # type: ignore[no-any-return]
 
 
 class TestConfigureLogging:
@@ -20,25 +46,15 @@ class TestConfigureLogging:
     def test_service_name_constant(self) -> None:
         assert SERVICE_NAME == "isnad-graph"
 
-    def test_json_output_contains_standard_fields(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """When LOG_FORMAT=json, output must be valid JSON with standard fields."""
-        monkeypatch.setenv("LOG_FORMAT", "json")
-        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
-
-        structlog.reset_defaults()
-        configure_logging()
-
-        logger = get_logger("test.json_output")
+    def test_json_output_contains_standard_fields(self) -> None:
+        """When configured for JSON, output must be valid JSON with standard fields."""
+        buf = io.StringIO()
+        logger = _make_json_logger(buf).bind(logger_name="test.json_output")
         logger.info("test_event", extra_field="value")
 
-        captured = capsys.readouterr()
-        # The log line should be valid JSON
-        line = captured.out.strip().splitlines()[-1]
-        parsed = json.loads(line)
+        lines = [ln for ln in buf.getvalue().strip().splitlines() if ln.strip()]
+        assert lines, f"No log output captured. buf={buf.getvalue()!r}"
+        parsed = json.loads(lines[-1])
         assert parsed["event"] == "test_event"
         assert parsed["level"] == "info"
         assert parsed["service"] == "isnad-graph"
@@ -46,8 +62,7 @@ class TestConfigureLogging:
         assert parsed["extra_field"] == "value"
         assert parsed["logger_name"] == "test.json_output"
 
-        # Cleanup: restore console mode
-        monkeypatch.setenv("LOG_FORMAT", "console")
+        # Cleanup: restore defaults
         structlog.reset_defaults()
         configure_logging()
 
@@ -66,7 +81,7 @@ class TestConfigureLogging:
             event_dict = proc(None, "info", event_dict)  # type: ignore[assignment]
 
         assert isinstance(event_dict, str)
-        parsed = json.loads(event_dict)  # type: ignore[arg-type]
+        parsed = json.loads(event_dict)
         assert parsed["event"] == "test_event"
         assert parsed["level"] == "info"
         assert parsed["service"] == "isnad-graph"
@@ -85,24 +100,16 @@ class TestConfigureLogging:
         result = _add_service_name(None, "info", event_dict)
         assert result["service"] == "custom"
 
-    def test_log_level_configurable(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        capsys: pytest.CaptureFixture[str],
-    ) -> None:
-        """Setting LOG_LEVEL=WARNING should suppress INFO messages."""
-        monkeypatch.setenv("LOG_FORMAT", "json")
-        monkeypatch.setenv("LOG_LEVEL", "WARNING")
-
-        structlog.reset_defaults()
-        configure_logging()
-
-        logger = get_logger("test.level")
+    def test_log_level_configurable(self) -> None:
+        """Setting level to WARNING should suppress INFO messages."""
+        buf = io.StringIO()
+        logger = _make_json_logger(buf, level=logging.WARNING).bind(
+            logger_name="test.level"
+        )
         logger.info("should_not_appear")
         logger.warning("should_appear")
 
-        captured = capsys.readouterr()
-        lines = [line for line in captured.out.strip().splitlines() if line.strip()]
+        lines = [ln for ln in buf.getvalue().strip().splitlines() if ln.strip()]
         # Only the warning should have been emitted
         assert len(lines) == 1
         parsed = json.loads(lines[0])
@@ -110,7 +117,5 @@ class TestConfigureLogging:
         assert parsed["level"] == "warning"
 
         # Cleanup
-        monkeypatch.setenv("LOG_FORMAT", "console")
-        monkeypatch.setenv("LOG_LEVEL", "DEBUG")
         structlog.reset_defaults()
         configure_logging()
