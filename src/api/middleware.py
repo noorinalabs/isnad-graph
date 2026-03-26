@@ -153,7 +153,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             results = pipe.execute()
             count: int = results[1]
             return count < self.requests_per_minute
-        except redis_lib.RedisError, OSError:
+        except (redis_lib.RedisError, OSError):  # fmt: skip
             # Redis went away mid-request — fall back to in-memory
             self._redis = None
             self._redis_checked = False

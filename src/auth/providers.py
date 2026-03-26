@@ -62,7 +62,7 @@ def store_pkce_verifier(state: str, verifier: str) -> None:
         try:
             redis_client.setex(f"pkce:{state}", _PKCE_TTL_SECONDS, verifier)
             return
-        except redis_lib.ConnectionError, redis_lib.TimeoutError, OSError:
+        except (redis_lib.ConnectionError, redis_lib.TimeoutError, OSError):  # fmt: skip
             logger.warning("Redis PKCE store failed, using in-memory fallback")
     _evict_expired_pkce()
     if len(_pkce_store) >= _PKCE_MAX_ENTRIES:
@@ -83,7 +83,7 @@ def retrieve_pkce_verifier(state: str) -> str | None:
             results = pipe.execute()
             value: str | None = results[0]
             return value
-        except redis_lib.ConnectionError, redis_lib.TimeoutError, OSError:
+        except (redis_lib.ConnectionError, redis_lib.TimeoutError, OSError):  # fmt: skip
             logger.warning("Redis PKCE retrieve failed, trying in-memory fallback")
     entry = _pkce_store.pop(state, None)
     if entry is None:

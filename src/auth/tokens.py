@@ -56,7 +56,7 @@ def _is_token_revoked(jti: str) -> bool:
     if redis_client is not None:
         try:
             return bool(redis_client.exists(f"revoked_token:{jti}") > 0)
-        except redis_lib.ConnectionError, redis_lib.TimeoutError, OSError:
+        except (redis_lib.ConnectionError, redis_lib.TimeoutError, OSError):  # fmt: skip
             logger.warning("Redis check failed, falling back to in-memory blacklist")
     return jti in _revoked_tokens
 
@@ -111,7 +111,7 @@ def revoke_token(token: str) -> None:
         try:
             redis_client.setex(f"revoked_token:{jti}", ttl_seconds, "1")
             return
-        except redis_lib.ConnectionError, redis_lib.TimeoutError, OSError:
+        except (redis_lib.ConnectionError, redis_lib.TimeoutError, OSError):  # fmt: skip
             logger.warning("Redis revoke failed, falling back to in-memory blacklist")
 
     _revoked_tokens.add(jti)
