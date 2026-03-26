@@ -74,20 +74,93 @@ class RequestSizeLimitMiddleware(BaseHTTPMiddleware):
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """Simple in-memory rate limiter using a sliding window per client IP.
+    """Sliding-window rate limiter with Redis backend and in-memory fallback.
 
-    This is suitable for single-process deployments. For multi-process or
-    distributed deployments, use Redis-backed rate limiting instead.
+    In production (multi-worker), uses a Redis sorted set per client IP so
+    that rate limit state is shared across all uvicorn workers. Falls back
+    to a per-process in-memory window when Redis is unavailable.
     """
 
     def __init__(
         self,
         app: object,
         requests_per_minute: int = 60,
+        window_seconds: int = 60,
+        redis_url: str | None = None,
     ) -> None:
         super().__init__(app)  # type: ignore[arg-type]
         self.requests_per_minute = requests_per_minute
+        self.window_seconds = window_seconds
+        self._redis_url = redis_url
+        self._redis: object | None = None
+        self._redis_checked = False
+        # In-memory fallback
         self._window: dict[str, list[float]] = {}
+
+    def _get_redis(self) -> object | None:
+        """Lazily connect to Redis. Returns None if unavailable."""
+        if self._redis_checked:
+            return self._redis
+        self._redis_checked = True
+        url = self._redis_url
+        if url is None:
+            try:
+                from src.config import get_settings
+
+                url = get_settings().redis.url
+            except Exception:  # noqa: BLE001
+                return None
+        try:
+            import redis as redis_lib
+
+            client = redis_lib.Redis.from_url(url, decode_responses=True)
+            client.ping()
+            self._redis = client
+        except Exception:  # noqa: BLE001
+            self._redis = None
+        return self._redis
+
+    def _check_redis(self, client_ip: str, now: float) -> bool | None:
+        """Check rate limit via Redis. Returns True if allowed, False if
+        exceeded, or None if Redis is unavailable."""
+        redis_client = self._get_redis()
+        if redis_client is None:
+            return None
+        try:
+            import redis as redis_lib
+
+            client: redis_lib.Redis = redis_client  # type: ignore[assignment]
+            key = f"ratelimit:{client_ip}"
+            window_start = now - self.window_seconds
+            pipe = client.pipeline()
+            # Remove entries outside the sliding window
+            pipe.zremrangebyscore(key, "-inf", window_start)
+            # Count remaining entries in the window
+            pipe.zcard(key)
+            # Add the current request timestamp
+            pipe.zadd(key, {str(now): now})
+            # Set expiry so keys don't linger forever
+            pipe.expire(key, self.window_seconds + 1)
+            results = pipe.execute()
+            count: int = results[1]
+            return count < self.requests_per_minute
+        except (redis_lib.RedisError, OSError):
+            # Redis went away mid-request — fall back to in-memory
+            self._redis = None
+            self._redis_checked = False
+            return None
+
+    def _check_memory(self, client_ip: str, now: float) -> bool:
+        """Check rate limit using in-memory sliding window."""
+        window_start = now - float(self.window_seconds)
+        timestamps = self._window.get(client_ip, [])
+        timestamps = [t for t in timestamps if t > window_start]
+        if len(timestamps) >= self.requests_per_minute:
+            self._window[client_ip] = timestamps
+            return False
+        timestamps.append(now)
+        self._window[client_ip] = timestamps
+        return True
 
     async def dispatch(
         self, request: StarletteRequest, call_next: RequestResponseEndpoint
@@ -95,23 +168,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         import time
 
         client_ip = request.client.host if request.client else "unknown"
-        now = time.monotonic()
-        window_start = now - 60.0
+        now = time.time()
 
-        # Get or create the request log for this IP
-        timestamps = self._window.get(client_ip, [])
-        # Prune old entries outside the window
-        timestamps = [t for t in timestamps if t > window_start]
+        allowed = self._check_redis(client_ip, now)
+        if allowed is None:
+            allowed = self._check_memory(client_ip, now)
 
-        if len(timestamps) >= self.requests_per_minute:
+        if not allowed:
             return Response(
                 status_code=429,
                 content="Rate limit exceeded. Try again later.",
-                headers={"Retry-After": "60"},
+                headers={"Retry-After": str(self.window_seconds)},
             )
-
-        timestamps.append(now)
-        self._window[client_ip] = timestamps
         return await call_next(request)
 
 

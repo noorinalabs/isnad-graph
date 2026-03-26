@@ -130,7 +130,12 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware, max_body_size=1_048_576)
-    app.add_middleware(RateLimitMiddleware, requests_per_minute=120)
+    app.add_middleware(
+        RateLimitMiddleware,
+        requests_per_minute=settings.rate_limit.requests_per_minute,
+        window_seconds=settings.rate_limit.window_seconds,
+        redis_url=settings.redis.url,
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
