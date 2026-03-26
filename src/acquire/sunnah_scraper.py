@@ -84,7 +84,6 @@ def _fetch_page(client: httpx.Client, url: str) -> BeautifulSoup | None:
         return None
 
 
-
 def _extract_hadith_from_row(row: Tag) -> dict[str, Any] | None:
     """Extract a single hadith record from a hadith container element."""
     # Hadith number
