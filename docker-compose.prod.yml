@@ -10,7 +10,10 @@
 
 services:
   neo4j:
-    image: neo4j:5-community
+    build:
+      context: ./infra/neo4j
+      dockerfile: Dockerfile
+    image: isnad-graph-neo4j:5-community
     ports:
       - "7474:7474"
       - "7687:7687"
