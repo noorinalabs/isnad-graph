@@ -308,7 +308,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required}
-      GF_SERVER_ROOT_URL: https://isnad-graph.how-a-steve-do.com/grafana
+      GF_SERVER_ROOT_URL: https://isnad-graph.noorinalabs.com/grafana
       GF_SERVER_SERVE_FROM_SUB_PATH: "true"
     expose:
       - "3000"
