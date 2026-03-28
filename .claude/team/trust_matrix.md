@@ -24,22 +24,23 @@ All team members maintain a trust score for every other team member they interac
 
 Rows = the team member rating. Columns = the team member being rated.
 
-*Note: Tariq and Mei-Lin archived after Phase 8 reorganization — removed from active matrix.*
+*Note: Tariq and Mei-Lin archived after Phase 8 reorganization — removed from active matrix. Sable added Phase 12 (hired 2026-03-28).*
 
-| Rater ↓ \ Rated → | Fatima | Renaud | Sunita | Tomasz | Dmitri | Kwame | Amara | Hiro | Carolina | Yara | Priya | Elena |
-|--------------------|--------|--------|--------|--------|--------|-------|-------|------|----------|------|-------|-------|
-| **Fatima**         | —      | 3      | 3      | 4      | 3      | 5     | 4     | 4    | 4        | 4    | 3     | 3     |
-| **Renaud**         | 3      | —      | 3      | 3      | 3      | 4     | 4     | 4    | 4        | 3    | 3     | 3     |
-| **Sunita**         | 3      | 3      | —      | 4      | 3      | 4     | 3     | 3    | 3        | 4    | 3     | 3     |
-| **Tomasz**         | 4      | 3      | 4      | —      | 3      | 3     | 3     | 3    | 3        | 4    | 3     | 3     |
-| **Dmitri**         | 3      | 3      | 3      | 3      | —      | 5     | 4     | 4    | 4        | 3    | 3     | 3     |
-| **Kwame**          | 4      | 3      | 3      | 4      | 4      | —     | 4     | 4    | 4        | 3    | 3     | 3     |
-| **Amara**          | 4      | 3      | 3      | 3      | 4      | 4     | —     | 4    | 4        | 3    | 3     | 3     |
-| **Hiro**           | 4      | 3      | 3      | 3      | 4      | 4     | 4     | —    | 4        | 3    | 3     | 3     |
-| **Carolina**       | 4      | 3      | 3      | 3      | 4      | 4     | 4     | 4    | —        | 3    | 3     | 3     |
-| **Yara**           | 3      | 3      | 4      | 4      | 3      | 3     | 3     | 3    | 3        | —    | 3     | 3     |
-| **Priya**          | 3      | 3      | 3      | 3      | 3      | 3     | 3     | 3    | 3        | 3    | —     | 3     |
-| **Elena**          | 3      | 3      | 3      | 3      | 3      | 3     | 3     | 3    | 3        | 3    | 3     | —     |
+| Rater ↓ \ Rated → | Fatima | Renaud | Sunita | Tomasz | Dmitri | Kwame | Amara | Hiro | Carolina | Yara | Priya | Elena | Sable |
+|--------------------|--------|--------|--------|--------|--------|-------|-------|------|----------|------|-------|-------|-------|
+| **Fatima**         | —      | 3      | 3      | 4      | 3      | 5     | 4     | 4    | 4        | 4    | 3     | 3     | 3     |
+| **Renaud**         | 3      | —      | 3      | 3      | 3      | 4     | 4     | 4    | 4        | 3    | 3     | 3     | 3     |
+| **Sunita**         | 3      | 3      | —      | 4      | 3      | 4     | 3     | 3    | 3        | 4    | 3     | 3     | 3     |
+| **Tomasz**         | 4      | 3      | 4      | —      | 3      | 3     | 3     | 3    | 3        | 4    | 3     | 3     | 3     |
+| **Dmitri**         | 3      | 3      | 3      | 3      | —      | 5     | 4     | 4    | 4        | 3    | 3     | 3     | 3     |
+| **Kwame**          | 4      | 3      | 3      | 4      | 4      | —     | 4     | 4    | 4        | 3    | 3     | 3     | 3     |
+| **Amara**          | 4      | 3      | 3      | 3      | 4      | 4     | —     | 4    | 4        | 3    | 3     | 3     | 3     |
+| **Hiro**           | 4      | 3      | 3      | 3      | 4      | 4     | 4     | —    | 4        | 3    | 3     | 3     | 3     |
+| **Carolina**       | 4      | 3      | 3      | 3      | 4      | 4     | 4     | 4    | —        | 3    | 3     | 3     | 3     |
+| **Yara**           | 3      | 3      | 4      | 4      | 3      | 3     | 3     | 3    | 3        | —    | 3     | 3     | 3     |
+| **Priya**          | 3      | 3      | 3      | 3      | 3      | 3     | 3     | 3    | 3        | 3    | —     | 3     | 3     |
+| **Elena**          | 3      | 3      | 3      | 3      | 3      | 3     | 3     | 3    | 3        | 3    | 3     | —     | 3     |
+| **Sable**          | 3      | 3      | 3      | 3      | 3      | 3     | 3     | 3    | 3        | 3    | 3     | 3     | —     |
 
 ## Change Log
 
@@ -81,3 +82,4 @@ Rows = the team member rating. Columns = the team member being rated.
 | 2026-03-27 | Fatima | Hiro | 4 | 4 | (no change) Delivered complex pre-commit framework (158 LOC) cleanly and on time. Confirms existing trust. |
 | 2026-03-27 | Tomasz | Fatima | 3 | 4 | Good coordination, fast CVE fix rollout, clear rebase instructions to all engineers. |
 | 2026-03-27 | Tomasz | Kwame | 4 | 3 | Committed to Tomasz's branch by mistake, requiring manual cleanup. Worktree discipline issue. |
+| 2026-03-28 | — | Sable | — | 3 | New hire (Principal UX Designer) added to matrix with default score of 3 for all team members. |
