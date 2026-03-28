@@ -6,13 +6,16 @@ help: ## Show this help
 setup: ## Install dependencies with uv
 	uv sync
 
-setup-hooks: ## Configure git hooks (legacy .githooks + pre-commit)
-	git config core.hooksPath .githooks
+setup-hooks: ## Configure git hooks (branch-name check + pre-commit)
+	git config --unset-all core.hooksPath 2>/dev/null || true
 	uv run pre-commit install
-	@echo "Git hooks configured (branch-name via .githooks, pre-commit via pre-commit framework)."
+	cp .githooks/pre-push .git/hooks/pre-push
+	@echo "Git hooks configured (pre-commit framework + branch-name pre-push check)."
 
 hooks: ## Install pre-commit hooks (one-time setup after clone)
+	git config --unset-all core.hooksPath 2>/dev/null || true
 	uv run pre-commit install
+	cp .githooks/pre-push .git/hooks/pre-push
 	@echo "Pre-commit hooks installed. They will run on every commit."
 
 infra: ## Start Docker services
