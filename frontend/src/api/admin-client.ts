@@ -7,17 +7,15 @@ import type {
 } from '../types/admin'
 import type { PaginatedResponse } from '../types/api'
 
-const API_BASE = '/api/v1/admin'
+import { API_BASE } from '../config'
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('access_token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+const ADMIN_BASE = `${API_BASE}/admin`
 
 async function fetchAdminJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...init,
-    headers: { ...getAuthHeaders(), ...init?.headers },
+    credentials: 'include',
+    headers: { ...init?.headers },
   })
   if (res.status === 401 || res.status === 403) {
     throw new Error('Unauthorized: admin access required')
@@ -37,18 +35,18 @@ export async function fetchAdminUsers(
   const params = new URLSearchParams({ page: String(page), limit: String(limit) })
   if (search) params.set('search', search)
   if (role) params.set('role', role)
-  return fetchAdminJson(`${API_BASE}/users?${params}`)
+  return fetchAdminJson(`${ADMIN_BASE}/users?${params}`)
 }
 
 export async function fetchAdminUser(userId: string): Promise<AdminUser> {
-  return fetchAdminJson(`${API_BASE}/users/${encodeURIComponent(userId)}`)
+  return fetchAdminJson(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`)
 }
 
 export async function updateAdminUser(
   userId: string,
   body: UserUpdateRequest,
 ): Promise<AdminUser> {
-  return fetchAdminJson(`${API_BASE}/users/${encodeURIComponent(userId)}`, {
+  return fetchAdminJson(`${ADMIN_BASE}/users/${encodeURIComponent(userId)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -56,13 +54,13 @@ export async function updateAdminUser(
 }
 
 export async function fetchSystemHealth(): Promise<SystemHealth> {
-  return fetchAdminJson(`${API_BASE}/health/ready`)
+  return fetchAdminJson(`${ADMIN_BASE}/health/ready`)
 }
 
 export async function fetchContentStats(): Promise<ContentStats> {
-  return fetchAdminJson(`${API_BASE}/stats`)
+  return fetchAdminJson(`${ADMIN_BASE}/stats`)
 }
 
 export async function fetchUsageAnalytics(): Promise<UsageAnalytics> {
-  return fetchAdminJson(`${API_BASE}/analytics`)
+  return fetchAdminJson(`${ADMIN_BASE}/analytics`)
 }

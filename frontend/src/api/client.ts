@@ -14,15 +14,58 @@ import type {
   SystemReport,
 } from '../types/api'
 
-const API_BASE = '/api/v1'
+import { API_BASE } from '../config'
 
-function getAuthHeaders(): HeadersInit {
-  const token = localStorage.getItem('access_token')
-  return token ? { Authorization: `Bearer ${token}` } : {}
+// Promise-based mutex: only one refresh request at a time.
+// Concurrent 401 handlers await the existing promise instead of firing new requests.
+let refreshPromise: Promise<boolean> | null = null
+
+async function attemptTokenRefresh(): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+    })
+    return res.ok
+  } catch {
+    return false
+  }
 }
 
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: getAuthHeaders() })
+function refreshOnce(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise
+  }
+  refreshPromise = attemptTokenRefresh().finally(() => {
+    refreshPromise = null
+  })
+  return refreshPromise
+}
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    ...init,
+    credentials: 'include',
+    headers: { ...init?.headers },
+  })
+
+  if (res.status === 401) {
+    const refreshed = await refreshOnce()
+    if (refreshed) {
+      const retry = await fetch(url, {
+        ...init,
+        credentials: 'include',
+        headers: { ...init?.headers },
+      })
+      if (retry.ok) {
+        return retry.json() as Promise<T>
+      }
+    }
+    // Refresh failed or retry still 401 — redirect to login
+    window.location.href = '/login'
+    throw new Error('Authentication expired')
+  }
+
   if (!res.ok) {
     throw new Error(`API error: ${res.status} ${res.statusText}`)
   }
@@ -148,13 +191,11 @@ export async function updateModerationItem(
 ): Promise<ModerationItem> {
   const body: Record<string, string> = { status }
   if (notes) body.notes = notes
-  const res = await fetch(`${API_BASE}/admin/moderation/${encodeURIComponent(id)}`, {
+  return fetchJson(`${API_BASE}/admin/moderation/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   })
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`)
-  return res.json() as Promise<ModerationItem>
 }
 
 export async function flagContent(
@@ -162,13 +203,11 @@ export async function flagContent(
   entityId: string,
   reason: string,
 ): Promise<ModerationItem> {
-  const res = await fetch(`${API_BASE}/admin/moderation/flag`, {
+  return fetchJson(`${API_BASE}/admin/moderation/flag`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ entity_type: entityType, entity_id: entityId, reason }),
   })
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`)
-  return res.json() as Promise<ModerationItem>
 }
 
 // --- Admin: Reports ---
