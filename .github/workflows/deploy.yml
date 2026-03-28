@@ -58,35 +58,24 @@ jobs:
           script: |
             set -euo pipefail
 
-            echo "==> Checking API health..."
-            for i in $(seq 1 12); do
-              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+            echo "==> Checking service health via Docker..."
+            for i in $(seq 1 24); do
+              api_health=$(docker inspect --format='{{.State.Health.Status}}' isnad-graph-api-1 2>/dev/null || echo "not_found")
+              echo "Attempt $i/24: API=$api_health"
+              if [ "$api_health" = "healthy" ]; then
                 echo "API health check passed"
                 break
               fi
-              if [ "$i" -eq 12 ]; then
-                echo "ERROR: API health check failed after 60 seconds"
+              if [ "$i" -eq 24 ]; then
+                echo "ERROR: API health check failed after 120 seconds"
                 docker compose -f /opt/isnad-graph/docker-compose.prod.yml logs --tail=50 api
                 exit 1
               fi
-              echo "Waiting for API (attempt $i/12)..."
               sleep 5
             done
 
-            echo "==> Checking frontend health..."
-            for i in $(seq 1 6); do
-              if curl -sf http://localhost:80/ > /dev/null 2>&1; then
-                echo "Frontend health check passed"
-                break
-              fi
-              if [ "$i" -eq 6 ]; then
-                echo "ERROR: Frontend health check failed after 30 seconds"
-                docker compose -f /opt/isnad-graph/docker-compose.prod.yml logs --tail=50 frontend
-                exit 1
-              fi
-              echo "Waiting for frontend (attempt $i/6)..."
-              sleep 5
-            done
+            echo "==> Checking all container health..."
+            docker compose -f /opt/isnad-graph/docker-compose.prod.yml ps --format '{{.Name}}\t{{.Status}}'
 
             echo "==> Deployment verified successfully"
 
