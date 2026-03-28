@@ -352,6 +352,7 @@ deployments/phase{N}/wave-{M}
   git checkout deployments/phase{N}/wave-{M} && git pull && git checkout -b {FirstInitial}.{LastName}/{IIII}-{issue-name}
   ```
 - Worktree agents should similarly base their worktree on the deployments branch for their wave.
+- **Worktree branch safety:** Each engineer must verify they are on their own branch before committing. Never commit to another engineer's branch. Before every commit, run `git branch --show-current` and confirm the branch name matches `{FirstInitial}.{LastName}/...`. If the branch doesn't match, switch to the correct branch before committing.
 - **Before submitting a PR**, the engineer must merge the latest from the deployments branch into their feature branch to avoid merge conflicts:
   ```bash
   git fetch origin && git merge origin/deployments/phase{N}/wave-{M}
@@ -402,10 +403,11 @@ Every software engineering branch must be reviewed by **one other software engin
 
 ### Peer Review Assignments
 
-For each wave, the Tech Lead assigns specific peer reviewers:
+For each wave, the Tech Lead assigns specific peer reviewers **at wave kickoff, before implementation begins**:
 - Each engineer's PR is reviewed by one designated peer (not self-selected)
 - Pairing rotates each wave to spread knowledge
 - The reviewer is responsible for running `make check` on the branch locally
+- **No PR may be merged without at least one peer review comment on the PR.** If the reviewer has no issues, they must still post an explicit approval comment (e.g., "Reviewed, LGTM"). This is a hard gate — not optional.
 
 ### Tech Debt Triage (Submitter)
 
@@ -424,6 +426,8 @@ After receiving the review, the submitter evaluates each tech debt item:
 
 When all work on a feature branch is complete (code committed, peer review done, must-fixes resolved), the submitting engineer **automatically creates a PR to the deployments branch** for their wave using the `gh` CLI. Do not wait for manual instruction.
 
+**PR ownership:** Only the engineer who implemented the work creates the PR. The Manager and leads must NOT create duplicate PRs for the same branch. If the Manager needs to add a fix (e.g., a CVE bump) to an existing branch, they coordinate with the engineer to push to that branch — they do not create a separate PR.
+
 ### PR Review Workflow for Deployments Branch PRs
 
 1. **Create the PR** targeting `deployments/phase{N}/wave-{M}`.
@@ -438,6 +442,10 @@ When all work on a feature branch is complete (code committed, peer review done,
    - **Non-trivial tech debt**: Create a GitHub Issue assigned to themselves (labeled `tech-debt` + their `FIRSTNAME_LASTNAME` label) for the Tech Lead to allocate in future planning (max 20% of any team member's capacity).
 5. **Push final changes** from the review fixes.
 6. **The team merges** the PR into the deployments branch themselves — no user approval needed for PRs into deployments branches.
+
+### Consolidated PRs for Shared Files
+
+When multiple issues in the same wave all modify the same file(s) (e.g., `docker-compose.prod.yml`), they SHOULD be fixed in a single consolidated branch and PR to avoid merge conflict churn. The branch name should reference all issue numbers: `{FirstInitial}.{LastName}/{IIII}-{JJJJ}-{KKKK}-{description}`. The PR body must list all issues it closes.
 
 ### Cross-PR Dependency Sequencing
 
@@ -542,3 +550,5 @@ When starting any work session, the orchestrating Claude instance should:
 > **Team name:** Every Agent tool call in this repo MUST include `team_name: "isnad-graph"`. This registers agents in Claude Code's team system, enabling the tree-view status line and inter-agent coordination.
 
 > **Agent tool limitation:** Spawned agents (including the Manager, leads, and engineers) do NOT have access to the Agent tool. They cannot spawn other agents. All agent spawning must be done by the orchestrating Claude instance. Spawned agents should use SendMessage to request new agents be created, providing the full context needed for the new agent's prompt.
+
+> **Small wave optimization:** For waves with ≤8 issues where all work is well-defined (bugs with clear fixes, straightforward chores), the orchestrator may skip spawning the lead layer (Sunita, Dmitri) and spawn engineers directly after the Manager provides the execution plan. For larger waves (>8 issues) or waves with architectural ambiguity, spawn leads as coordination-only agents to manage delegation and cross-team dependencies.
