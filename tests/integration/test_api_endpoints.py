@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from src.api.app import create_app
+from src.auth.tokens import create_access_token
 from src.utils.neo4j_client import Neo4jClient
 
 pytestmark = pytest.mark.integration
@@ -24,7 +25,10 @@ def _seed_data(neo4j_client: Neo4jClient) -> None:
         SET n.name_ar = row.name_ar,
             n.name_en = row.name_en,
             n.generation = row.generation,
-            n.death_year_ah = row.death_year_ah
+            n.death_year_ah = row.death_year_ah,
+            n.gender = row.gender,
+            n.sect_affiliation = row.sect_affiliation,
+            n.trustworthiness_consensus = row.trustworthiness_consensus
         """,
         [
             {
@@ -33,6 +37,9 @@ def _seed_data(neo4j_client: Neo4jClient) -> None:
                 "name_en": "Abu Hurayrah",
                 "generation": "sahabi",
                 "death_year_ah": 59,
+                "gender": "male",
+                "sect_affiliation": "sunni",
+                "trustworthiness_consensus": "thiqa",
             },
             {
                 "id": "nar:002",
@@ -40,6 +47,9 @@ def _seed_data(neo4j_client: Neo4jClient) -> None:
                 "name_en": "Malik ibn Anas",
                 "generation": "tabii",
                 "death_year_ah": 179,
+                "gender": "male",
+                "sect_affiliation": "sunni",
+                "trustworthiness_consensus": "thiqa",
             },
         ],
     )
@@ -103,7 +113,12 @@ def api_client(neo4j_client: Neo4jClient, _seed_data: None) -> TestClient:
     """FastAPI TestClient backed by a real Neo4j container."""
     app = create_app()
     app.state.neo4j = neo4j_client
-    return TestClient(app, raise_server_exceptions=False)
+    token = create_access_token("test-integration-user")
+    return TestClient(
+        app,
+        raise_server_exceptions=False,
+        headers={"Authorization": f"Bearer {token}"},
+    )
 
 
 class TestNarratorsEndpoint:
