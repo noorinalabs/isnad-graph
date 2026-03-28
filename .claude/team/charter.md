@@ -655,13 +655,32 @@ Umbrella tech-debt issues are acceptable for tracking, but before rolling into a
 2. Label each correctly with `tech-debt` + assignee label.
 3. Close the original umbrella ticket.
 
-## GitHub Label Hygiene
+## GitHub Issue & Label Hygiene
+
+### Label Verification
 
 Before any batch of `gh issue create` calls, verify all labels exist first:
 1. Run `gh label list` to check existing labels.
 2. Create any missing labels with `gh label create` before creating issues.
 
 Using a non-existent label causes `gh issue create` to fail, blocking parallel issue creation.
+
+### Issue Body Format
+
+When creating issues with `gh issue create --body`, **never put `#` at the start of a line inside a heredoc**. The shell interprets `\n#` as a comment, which triggers a Claude Code permission prompt that blocks automated workflows.
+
+Instead, write the body to a temp file and use `--body-file`:
+```bash
+cat > /tmp/issue-body.md << 'BODY'
+## Description
+The issue description here.
+
+## Acceptance Criteria
+- [ ] First criterion
+BODY
+gh issue create --title "the title" --label "label1,label2" --body-file /tmp/issue-body.md
+rm /tmp/issue-body.md
+```
 
 ## Release & Documentation Process
 
