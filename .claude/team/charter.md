@@ -568,4 +568,93 @@ When starting any work session, the orchestrating Claude instance should:
 
 > **Agent tool limitation:** Spawned agents (including the Manager, leads, and engineers) do NOT have access to the Agent tool. They cannot spawn other agents. All agent spawning must be done by the orchestrating Claude instance. Spawned agents should use SendMessage to request new agents be created, providing the full context needed for the new agent's prompt.
 
+### Team Lifecycle (TeamCreate / TeamDelete)
+
+At the start of every wave or work session that requires agents:
+
+1. **Tell the user** you are tearing down the previous team — state the team name and its full roster (names + roles).
+2. Call `TeamDelete`.
+3. **Tell the user** you are creating the new team — state the team name and its full roster (names + roles).
+4. Call `TeamCreate`.
+5. If the roster changed between old and new, **explain why** (new hires, departures, role changes).
+6. Then spawn agents.
+
+This must be transparent. The user wants visibility into team lifecycle transitions.
+
 > **Small wave optimization:** For waves with ≤8 issues where all work is well-defined (bugs with clear fixes, straightforward chores), the orchestrator may skip spawning the lead layer (Sunita, Dmitri) and spawn engineers directly after the Manager provides the execution plan. For larger waves (>8 issues) or waves with architectural ambiguity, spawn leads as coordination-only agents to manage delegation and cross-team dependencies.
+
+## Wave Planning & Priority
+
+### Priority Order
+
+The standard priority order for every wave is:
+1. **Security fixes** (must-fix and should-fix from security reviews)
+2. **Bug fixes**
+3. **Feature development / chores**
+
+All open bugs must be addressed before starting new feature work. If a phase has outstanding bugs, Wave 1 addresses them; new features start in Wave 2 or later.
+
+### Wave Retrospectives
+
+Before every new wave, run a retrospective:
+
+1. Manager spawns retro conversations with each team lead.
+2. Each lead discusses with their reports: what went well, what didn't, what to improve.
+3. Manager consolidates into a single retro document persisted to `feedback/retro-phase{N}-wave{M}.md`.
+4. **Present proposed process changes to the user and explicitly ask which to adopt.** Do NOT assume all are adopted.
+5. Only after user approval does the wave's implementation start.
+
+### Knowledge Transfer for Cross-Specialty Reassignment
+
+When work is redistributed to a team member outside their specialty:
+
+1. The new assignee writes their proposed approach in the issue.
+2. The domain expert (original specialist) reviews and provides feedback.
+3. The assignee incorporates feedback.
+4. Only then does implementation begin.
+
+## Bug Management
+
+### Bug Triage
+
+When bugs are discovered, file as GitHub Issues with:
+- Label: `bug`
+- Label: `found-in-phase{N}-wave{M}` (where discovered)
+- When resolved, add label: `fixed-in-phase{N}-wave{M}` (where fixed)
+
+At the start of each wave, triage all open bugs: fix now (assign to current wave) or defer (stays open with labels).
+
+### Bug Closure
+
+Close bug issues when the corresponding fix PR merges. Use `Closes #N` in PR descriptions. If the fix cannot be self-verified (e.g., environment-specific), notify the user to verify before closing.
+
+### Umbrella Tech Debt Decomposition
+
+Umbrella tech-debt issues are acceptable for tracking, but before rolling into a phase:
+1. Create individual tech-debt issues from the umbrella.
+2. Label each correctly with `tech-debt` + assignee label.
+3. Close the original umbrella ticket.
+
+## GitHub Label Hygiene
+
+Before any batch of `gh issue create` calls, verify all labels exist first:
+1. Run `gh label list` to check existing labels.
+2. Create any missing labels with `gh label create` before creating issues.
+
+Using a non-existent label causes `gh issue create` to fail, blocking parallel issue creation.
+
+## Release & Documentation Process
+
+### Releases
+
+When a deployments branch PR is merged to main, create a GitHub release:
+- **Tag:** `phaseN-waveM` (e.g., `phase10-wave3`)
+- **Title:** Same as the PR title
+- **Body:** Same as the PR body
+
+### Documentation Maintenance
+
+After every wave completes and the deployments branch is PR'd to main:
+1. Scan `docs/`, `docs/diagrams/`, and `README.md` against the changes in the PR.
+2. Update any stale diagrams or documentation.
+3. The System Architect (Renaud) owns diagram accuracy; the Manager owns doc accuracy.
