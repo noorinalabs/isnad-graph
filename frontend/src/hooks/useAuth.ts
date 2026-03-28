@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
 import { createElement } from 'react'
+import { API_BASE } from '../config'
 
 interface AuthUser {
   id: string
@@ -13,8 +14,6 @@ interface AuthContextValue {
   loading: boolean
   isAdmin: boolean
 }
-
-const API_BASE = '/api/v1'
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
