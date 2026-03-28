@@ -62,3 +62,29 @@ Track all feedback events here. Format:
 - Agent naming convention was violated multiple times before being codified. **Action:** Added explicit naming convention and mapping guide to charter.
 - ADRs were missing — key architectural decisions were only in PRD or commit messages. **Action:** Created ADR log with retroactive entries for 4 key decisions.
 - Feedback log was empty despite 8 phases of work. **Action:** Backfilled with retro findings from Phases 5-8.
+
+---
+
+## 2026-03-27 — Phase 10, Wave 3 Retrospective (consolidated by Fatima)
+
+### Positive
+- Tomasz carried 6 of 8 issues with clean, fast delivery across 4 PRs — strongest individual output this wave
+- Consolidated PR approach (#355/#357/#362 in one PR) avoided merge conflicts on shared files — validated as a pattern for future waves
+- Fatima's CVE catch (ecdsa 0.19.1 → 0.19.2, CVE-2026-33936) unblocked all PRs; proactive fix rolled into existing PR
+- Hiro delivered the most complex feature (pre-commit framework, 158 LOC) cleanly and independently
+- Bugs-before-features discipline held — all 6 bugs merged before either feature started
+- Fast turnaround — all 8 issues completed in a single session
+
+### Areas for Improvement
+- **No peer reviews on any PR.** 0 of 6 PRs received peer review despite charter requirement. **Action:** Enforce peer review assignment at sprint kickoff; block merge without at least one review comment.
+- **Kwame committed to wrong worktree branch.** Stray commit on Tomasz's `T.Wojcik/0355-0357-0362-docker-compose-prod-fixes` branch required manual cleanup. **Action:** Add worktree safety reminder to engineer spawn prompts; consider pre-commit hook that validates branch ownership matches committer identity.
+- **Manager (Fatima) cannot spawn agents.** Spent ~5 minutes sending messages to non-existent agents before escalating. **Action:** Charter updated (§ "How to Instantiate the Team") to document that only the orchestrator can spawn agents. Feedback memory saved.
+- **Lead layer (Sunita, Dmitri) was bypassed entirely.** Orchestrator spawned engineers directly for efficiency. This worked but deviates from charter's delegation model. **Action:** Accept this as pragmatic for small waves; for larger waves, spawn leads as coordination-only agents.
+- **Duplicate PR created.** Both tomasz-355-357-362 (#365) and Fatima (#366) created PRs for the same consolidated fix. #365 was closed unmerged. **Action:** Clarify PR ownership — the engineer creates the PR, the manager does not duplicate it.
+
+### Severity Assessments
+- Kwame Asante — **Moderate** (wrong-branch commit). Documented, improvement expected. Trust: Tomasz→Kwame 4→3.
+- Fatima Okonkwo — **Minor** (agent spawn confusion). Tooling limitation, not a judgment error. Now documented.
+
+### No Fire/Hire Actions
+No severe feedback warrants termination this wave. Kwame's error was a one-off process mistake, not a pattern.
