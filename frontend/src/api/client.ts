@@ -14,7 +14,7 @@ import type {
   SystemReport,
 } from '../types/api'
 
-const API_BASE = '/api/v1'
+import { API_BASE } from '../config'
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem('access_token')

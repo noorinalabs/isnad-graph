@@ -13,6 +13,7 @@ import SearchPage from './pages/SearchPage'
 import TimelinePage from './pages/TimelinePage'
 import ComparativePage from './pages/ComparativePage'
 import GraphExplorerPage from './pages/GraphExplorerPage'
+import LoginPage from './pages/LoginPage'
 import UserManagementPage from './pages/admin/UserManagementPage'
 import SystemHealthPage from './pages/admin/SystemHealthPage'
 import ContentStatsPage from './pages/admin/ContentStatsPage'
@@ -36,6 +37,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
+            <Route path="login" element={<LoginPage />} />
             <Route element={<Layout />}>
               <Route index element={<Navigate to="/narrators" replace />} />
               <Route path="narrators" element={<NarratorsPage />} />
