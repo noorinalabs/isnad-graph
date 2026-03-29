@@ -149,6 +149,43 @@ def update_user(
     return _row_to_user(rows[0]) if rows else None
 
 
+def create_email_user(
+    pg: PgClient,
+    *,
+    email: str,
+    name: str,
+    password_hash: str,
+) -> User:
+    """Create a new user with email/password provider. Returns the user.
+
+    Raises a duplicate-key error if the email already exists (caller should
+    catch and return 409).
+    """
+    rows = pg.execute(
+        """
+        INSERT INTO users (id, email, name, provider, provider_user_id, password_hash)
+        VALUES (%s, %s, %s, 'email', %s, %s)
+        RETURNING id, email, name, provider, provider_user_id, password_hash,
+                  is_admin, is_suspended, role, created_at, updated_at
+        """,
+        (str(uuid.uuid4()), email, name, email, password_hash),
+    )
+    return _row_to_user(rows[0])
+
+
+def get_user_by_email(pg: PgClient, email: str) -> User | None:
+    """Fetch a user by email address (any provider)."""
+    rows = pg.execute(
+        """
+        SELECT id, email, name, provider, provider_user_id, password_hash,
+               is_admin, is_suspended, role, created_at, updated_at
+        FROM users WHERE email = %s
+        """,
+        (email,),
+    )
+    return _row_to_user(rows[0]) if rows else None
+
+
 def _row_to_user(row: dict[str, Any]) -> User:
     """Convert a PG row dict to a User model."""
     return User(

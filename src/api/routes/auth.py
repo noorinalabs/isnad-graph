@@ -1,18 +1,31 @@
-"""Authentication endpoints for OAuth login flows."""
+"""Authentication endpoints for OAuth login flows and email/password auth."""
 
 from __future__ import annotations
 
+import logging
 import secrets
 import time
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from starlette.responses import RedirectResponse, Response
 
 from src.api.middleware import require_auth
-from src.auth.models import AuthorizationUrlResponse, RefreshRequest, TokenResponse, User
+from src.auth.models import (
+    AuthorizationUrlResponse,
+    EmailLoginRequest,
+    RefreshRequest,
+    RegisterRequest,
+    TokenResponse,
+    User,
+    UserPublic,
+)
 from src.auth.providers import PROVIDERS, get_provider, retrieve_pkce_verifier, store_pkce_verifier
+from src.auth.rate_limit import check_rate_limit
 from src.auth.tokens import create_access_token, create_refresh_token, revoke_token, verify_token
 from src.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -63,6 +76,127 @@ def _set_token_cookies(response: Response, access_token: str, refresh_token: str
         max_age=settings.access_token_expire_minutes * 60,
         **meta_common,  # type: ignore[arg-type]
     )
+
+
+def _build_token_response(user_id: str) -> tuple[TokenResponse, str, str]:
+    """Create access + refresh tokens and build a TokenResponse."""
+    settings = get_settings().auth
+    access_token = create_access_token(user_id)
+    refresh_token = create_refresh_token(user_id)
+    token_resp = TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+        expires_in=settings.access_token_expire_minutes * 60,
+    )
+    return token_resp, access_token, refresh_token
+
+
+def _get_client_ip(request: Request) -> str:
+    """Extract client IP from the request."""
+    return request.client.host if request.client else "unknown"
+
+
+# --- Email/password registration ---
+
+
+@router.post("/auth/register", response_model=TokenResponse, status_code=201)
+def register(request: Request, body: RegisterRequest) -> Response:
+    """Register a new user with email and password.
+
+    Rate limited to 3 requests per minute per IP.
+    """
+    client_ip = _get_client_ip(request)
+    if not check_rate_limit(f"register:{client_ip}", max_requests=3, window_seconds=60):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many registration attempts. Try again later.",
+            headers={"Retry-After": "60"},
+        )
+
+    from src.auth.passwords import hash_password
+    from src.auth.pg_users import create_email_user, ensure_users_table
+    from src.utils.pg_client import PgClient
+
+    password_hash = hash_password(body.password)
+
+    pg = PgClient()
+    try:
+        ensure_users_table(pg)
+        try:
+            user = create_email_user(
+                pg,
+                email=body.email,
+                name=body.name,
+                password_hash=password_hash,
+            )
+        except Exception as exc:
+            err_msg = str(exc).lower()
+            if "unique" in err_msg or "duplicate" in err_msg or "ix_users_email" in err_msg:
+                raise HTTPException(
+                    status_code=409,
+                    detail="An account with this email already exists",
+                ) from exc
+            raise
+    finally:
+        pg.close()
+
+    logger.info("User registered: email=%s, id=%s", body.email, user.id)
+
+    token_resp, access_token, refresh_token = _build_token_response(user.id)
+    response = JSONResponse(content=token_resp.model_dump(), status_code=201)
+    _set_token_cookies(response, access_token, refresh_token)
+    return response
+
+
+# --- Email/password login ---
+
+
+@router.post("/auth/login/email", response_model=TokenResponse)
+def login_email(request: Request, body: EmailLoginRequest) -> Response:
+    """Authenticate with email and password.
+
+    Rate limited to 5 requests per minute per IP.
+    """
+    client_ip = _get_client_ip(request)
+    if not check_rate_limit(f"login_email:{client_ip}", max_requests=5, window_seconds=60):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many login attempts. Try again later.",
+            headers={"Retry-After": "60"},
+        )
+
+    from src.auth.passwords import verify_password
+    from src.auth.pg_users import ensure_users_table, get_user_by_email
+    from src.utils.pg_client import PgClient
+
+    email = body.email.strip().lower()
+
+    pg = PgClient()
+    try:
+        ensure_users_table(pg)
+        user = get_user_by_email(pg, email)
+    finally:
+        pg.close()
+
+    if user is None or user.provider != "email" or user.password_hash is None:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if user.is_suspended:
+        raise HTTPException(status_code=403, detail="Account suspended")
+
+    logger.info("Email login: email=%s, id=%s", email, user.id)
+
+    token_resp, access_token, refresh_token = _build_token_response(user.id)
+    response = JSONResponse(content=token_resp.model_dump())
+    _set_token_cookies(response, access_token, refresh_token)
+    return response
+
+
+# --- OAuth login ---
 
 
 @router.post(
@@ -160,17 +294,7 @@ def refresh(request: Request, body: RefreshRequest | None = None) -> Response:
     # Revoke the old refresh token (rotation)
     revoke_token(token)
 
-    settings = get_settings().auth
-    new_access = create_access_token(user_id)
-    new_refresh = create_refresh_token(user_id)
-
-    token_resp = TokenResponse(
-        access_token=new_access,
-        refresh_token=new_refresh,
-        token_type="bearer",
-        expires_in=settings.access_token_expire_minutes * 60,
-    )
-    from fastapi.responses import JSONResponse
+    token_resp, new_access, new_refresh = _build_token_response(user_id)
 
     response = JSONResponse(content=token_resp.model_dump())
     _set_token_cookies(response, new_access, new_refresh)
@@ -187,7 +311,7 @@ def logout(user: User = Depends(require_auth)) -> Response:
     return response
 
 
-@router.get("/auth/me", response_model=User)
-def me(user: User = Depends(require_auth)) -> User:
+@router.get("/auth/me", response_model=UserPublic)
+def me(user: User = Depends(require_auth)) -> UserPublic:
     """Return the current authenticated user from PostgreSQL."""
-    return user
+    return UserPublic.from_user(user)
