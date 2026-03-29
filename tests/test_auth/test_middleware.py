@@ -35,6 +35,36 @@ class TestProtectedEndpoints:
         )
         assert resp.status_code != 401
 
+    def test_narrators_accessible_with_cookie(
+        self, client: TestClient, mock_neo4j: MagicMock
+    ) -> None:
+        """Cookie-based auth fallback should work when no Authorization header is sent."""
+        mock_neo4j.execute_read.return_value = []
+        token = create_access_token("cookie-user")
+        client.cookies.set("access_token", token)
+        resp = client.get("/api/v1/narrators")
+        assert resp.status_code != 401
+
+    def test_header_takes_precedence_over_cookie(self, client: TestClient) -> None:
+        """When both header and cookie are present, the header token is used."""
+        header_token = create_access_token("header-user")
+        cookie_token = create_access_token("cookie-user")
+        client.cookies.set("access_token", cookie_token)
+        resp = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {header_token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["id"] == "header-user"
+
+    def test_cookie_auth_returns_user(self, client: TestClient) -> None:
+        """Cookie auth should return the correct user identity."""
+        token = create_access_token("cookie-user-id")
+        client.cookies.set("access_token", token)
+        resp = client.get("/api/v1/auth/me")
+        assert resp.status_code == 200
+        assert resp.json()["id"] == "cookie-user-id"
+
 
 class TestPublicEndpoints:
     """Health and auth endpoints should be accessible without a token."""
@@ -100,3 +130,41 @@ class TestRefreshEndpoint:
         client.cookies.set("refresh_token", access)
         resp = client.post("/api/v1/auth/refresh")
         assert resp.status_code == 401
+
+
+class TestRBAC:
+    """Test role-based access control."""
+
+    def test_admin_route_rejects_viewer(self, client: TestClient) -> None:
+        token = create_access_token("viewer-user", role="viewer")
+        resp = client.get(
+            "/api/v1/admin/health/live",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 403
+
+    def test_admin_route_allows_admin(self, client: TestClient) -> None:
+        token = create_access_token("admin-user", role="admin")
+        resp = client.get(
+            "/api/v1/admin/health/live",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code != 403
+
+    def test_auth_me_includes_role(self, client: TestClient) -> None:
+        token = create_access_token("role-user", role="researcher")
+        resp = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["role"] == "researcher"
+
+    def test_default_role_is_viewer(self, client: TestClient) -> None:
+        token = create_access_token("no-role-user")
+        resp = client.get(
+            "/api/v1/auth/me",
+            headers={"Authorization": f"Bearer {token}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["role"] == "viewer"

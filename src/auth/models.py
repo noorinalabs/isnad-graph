@@ -4,8 +4,28 @@ from __future__ import annotations
 
 import re
 from datetime import datetime
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, field_validator
+
+
+class Role(str, Enum):
+    """User role for RBAC."""
+
+    VIEWER = "viewer"
+    RESEARCHER = "researcher"
+    EDITOR = "editor"
+    ADMIN = "admin"
+    SUPERADMIN = "superadmin"
+
+
+ROLE_HIERARCHY: dict[str, int] = {
+    Role.VIEWER: 0,
+    Role.RESEARCHER: 1,
+    Role.EDITOR: 2,
+    Role.ADMIN: 3,
+    Role.SUPERADMIN: 4,
+}
 
 
 class User(BaseModel):

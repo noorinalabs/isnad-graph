@@ -19,7 +19,9 @@ logger = logging.getLogger(__name__)
 _revoked_tokens: TTLCache[str, bool] = TTLCache(maxsize=10_000, ttl=1800)
 
 
-def create_access_token(user_id: str, expires_minutes: int | None = None) -> str:
+def create_access_token(
+    user_id: str, expires_minutes: int | None = None, role: str = "viewer"
+) -> str:
     """Create a JWT access token for the given user."""
     settings = get_settings().auth
     if expires_minutes is None:
@@ -28,6 +30,7 @@ def create_access_token(user_id: str, expires_minutes: int | None = None) -> str
     payload = {
         "sub": user_id,
         "type": "access",
+        "role": role,
         "exp": expire,
         "iat": datetime.now(UTC),
         "jti": secrets.token_hex(16),

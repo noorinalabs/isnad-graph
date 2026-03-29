@@ -2,23 +2,42 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from src.api.deps import get_neo4j
-from src.api.models import PaginatedResponse, UserAdminResponse, UserUpdateRequest
+from src.api.models import PaginatedResponse, UserUpdateRequest
+from src.auth.models import UserPublic
 from src.utils.neo4j_client import Neo4jClient
 
 router = APIRouter(prefix="/users")
 
 
-@router.get("", response_model=PaginatedResponse[UserAdminResponse])
+def _user_from_record(r: dict[str, Any]) -> UserPublic:
+    """Build a UserPublic from a Neo4j user record, stripping password_hash."""
+    u: dict[str, Any] = r["u"]
+    return UserPublic(
+        id=u["id"],
+        email=u.get("email", ""),
+        name=u.get("name", ""),
+        provider=u.get("provider", ""),
+        provider_user_id=u.get("provider_user_id", u["id"]),
+        created_at=u.get("created_at", ""),
+        is_admin=u.get("is_admin", False),
+        is_suspended=u.get("is_suspended", False),
+        role=u.get("role"),
+    )
+
+
+@router.get("", response_model=PaginatedResponse[UserPublic])
 def list_users(
     neo4j: Neo4jClient = Depends(get_neo4j),
     page: int = Query(1, ge=1),
     limit: int = Query(20, ge=1, le=100),
     search: str | None = Query(None),
     role: str | None = Query(None),
-) -> PaginatedResponse[UserAdminResponse]:
+) -> PaginatedResponse[UserPublic]:
     """List users with optional search and role filters."""
     params: dict[str, object] = {"skip": (page - 1) * limit, "limit": limit}
     where_clauses: list[str] = []
@@ -42,29 +61,16 @@ def list_users(
         SKIP $skip LIMIT $limit
     """
     records = neo4j.execute_read(query, params)
+    items = [_user_from_record(r) for r in records]
 
-    items = [
-        UserAdminResponse(
-            id=r["u"]["id"],
-            email=r["u"].get("email", ""),
-            name=r["u"].get("name", ""),
-            provider=r["u"].get("provider", ""),
-            is_admin=r["u"].get("is_admin", False),
-            is_suspended=r["u"].get("is_suspended", False),
-            created_at=r["u"].get("created_at", ""),
-            role=r["u"].get("role"),
-        )
-        for r in records
-    ]
-
-    return PaginatedResponse[UserAdminResponse](items=items, total=total, page=page, limit=limit)
+    return PaginatedResponse[UserPublic](items=items, total=total, page=page, limit=limit)
 
 
-@router.get("/{user_id}", response_model=UserAdminResponse)
+@router.get("/{user_id}", response_model=UserPublic)
 def get_user(
     user_id: str,
     neo4j: Neo4jClient = Depends(get_neo4j),
-) -> UserAdminResponse:
+) -> UserPublic:
     """Get a single user by ID."""
     query = "MATCH (u:USER {id: $user_id}) RETURN u"
     records = neo4j.execute_read(query, {"user_id": user_id})
@@ -72,25 +78,15 @@ def get_user(
     if not records:
         raise HTTPException(status_code=404, detail="User not found")
 
-    r = records[0]
-    return UserAdminResponse(
-        id=r["u"]["id"],
-        email=r["u"].get("email", ""),
-        name=r["u"].get("name", ""),
-        provider=r["u"].get("provider", ""),
-        is_admin=r["u"].get("is_admin", False),
-        is_suspended=r["u"].get("is_suspended", False),
-        created_at=r["u"].get("created_at", ""),
-        role=r["u"].get("role"),
-    )
+    return _user_from_record(records[0])
 
 
-@router.patch("/{user_id}", response_model=UserAdminResponse)
+@router.patch("/{user_id}", response_model=UserPublic)
 def update_user(
     user_id: str,
     body: UserUpdateRequest,
     neo4j: Neo4jClient = Depends(get_neo4j),
-) -> UserAdminResponse:
+) -> UserPublic:
     """Update user properties (suspend, promote, change role)."""
     set_clauses: list[str] = []
     params: dict[str, object] = {"user_id": user_id}
@@ -118,14 +114,4 @@ def update_user(
     if not records:
         raise HTTPException(status_code=404, detail="User not found")
 
-    r = records[0]
-    return UserAdminResponse(
-        id=r["u"]["id"],
-        email=r["u"].get("email", ""),
-        name=r["u"].get("name", ""),
-        provider=r["u"].get("provider", ""),
-        is_admin=r["u"].get("is_admin", False),
-        is_suspended=r["u"].get("is_suspended", False),
-        created_at=r["u"].get("created_at", ""),
-        role=r["u"].get("role"),
-    )
+    return _user_from_record(records[0])
