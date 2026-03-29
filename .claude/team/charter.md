@@ -624,6 +624,18 @@ At the start of every wave or work session that requires agents:
 
 This must be transparent. The user wants visibility into team lifecycle transitions.
 
+### Designated Reviewers Must Be Spawned
+
+When spawning implementation agents for a layer, **also spawn their designated peer reviewers** as agents in the same team. If an engineer's reviewer is not running as an agent, the engineer cannot complete the review cycle and will go idle.
+
+The orchestrator must:
+1. Determine peer review pairs at spawn time (from the execution plan).
+2. Spawn both the implementer AND their reviewer as agents.
+3. If an engineer is reviewing another engineer's work AND implementing their own, one agent handles both — no need to spawn twice.
+4. Include in each agent's spawn prompt: "Your reviewer is {name}. After creating your PR, notify them via SendMessage."
+
+If the reviewer is the same person reviewing multiple PRs (e.g., one engineer reviews two others), that's fine — they can review sequentially.
+
 > **Small wave optimization:** For waves with ≤8 issues where all work is well-defined (bugs with clear fixes, straightforward chores), the orchestrator may skip spawning the lead layer (Sunita, Dmitri) and spawn engineers directly after the Manager provides the execution plan. For larger waves (>8 issues) or waves with architectural ambiguity, spawn leads as coordination-only agents to manage delegation and cross-team dependencies.
 
 ## Wave Planning & Priority
