@@ -1,0 +1,127 @@
+name: Restore
+
+on:
+  workflow_dispatch:
+    inputs:
+      backup_path:
+        description: "Backup path (e.g. 'latest', 'daily/2026-03-25', 'weekly/2026-03-23')"
+        required: true
+        type: string
+        default: "latest"
+      rollback_code:
+        description: "Also roll back code to the commit stored in .last-deploy-sha"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Restore databases from backup
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        env:
+          B2_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          B2_APP_KEY: ${{ secrets.B2_APP_KEY }}
+          B2_BUCKET: ${{ secrets.B2_BUCKET }}
+          NEO4J_PASSWORD: ${{ secrets.NEO4J_PASSWORD }}
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+          REDIS_PASSWORD: ${{ secrets.REDIS_PASSWORD }}
+          BACKUP_PATH: ${{ inputs.backup_path }}
+          ROLLBACK_CODE: ${{ inputs.rollback_code }}
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          envs: B2_KEY_ID,B2_APP_KEY,B2_BUCKET,NEO4J_PASSWORD,POSTGRES_USER,POSTGRES_PASSWORD,POSTGRES_DB,REDIS_PASSWORD,BACKUP_PATH,ROLLBACK_CODE
+          command_timeout: 10m
+          script: |
+            set -euo pipefail
+            cd /opt/isnad-graph
+
+            # Optionally roll back code to pre-deploy commit
+            if [[ "$ROLLBACK_CODE" == "true" ]]; then
+              if [[ -f /opt/isnad-graph/.last-deploy-sha ]]; then
+                PREVIOUS_SHA=$(cat /opt/isnad-graph/.last-deploy-sha)
+                echo "==> Rolling back code to commit ${PREVIOUS_SHA}..."
+                git fetch origin
+                git reset --hard "${PREVIOUS_SHA}"
+              else
+                echo "WARNING: No previous deploy SHA found — skipping code rollback"
+              fi
+            fi
+
+            # Stop API to prevent writes during restore
+            echo "==> Stopping API container..."
+            docker compose -f docker-compose.prod.yml stop api || true
+
+            # Ensure PG and Neo4j are running for restore
+            export NEO4J_PASSWORD="$NEO4J_PASSWORD"
+            export POSTGRES_USER="$POSTGRES_USER"
+            export POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+            export POSTGRES_DB="$POSTGRES_DB"
+            export REDIS_PASSWORD="$REDIS_PASSWORD"
+            docker compose -f docker-compose.prod.yml up -d postgres neo4j
+            sleep 10
+
+            # Restore databases (restore.sh restores PG first, then Neo4j)
+            echo "==> Restoring from backup: ${BACKUP_PATH}..."
+            export B2_KEY_ID="$B2_KEY_ID"
+            export B2_APP_KEY="$B2_APP_KEY"
+            export B2_BUCKET="$B2_BUCKET"
+            bash scripts/restore.sh --force "$BACKUP_PATH"
+
+            # Rebuild (if code was rolled back) and bring up all services
+            echo "==> Bringing up all services..."
+            if [[ "$ROLLBACK_CODE" == "true" ]]; then
+              docker compose -f docker-compose.prod.yml build
+            fi
+            docker compose -f docker-compose.prod.yml up -d \
+              --force-recreate --remove-orphans
+
+            echo "==> Restore complete"
+
+      - name: Verify health after restore
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        with:
+          host: ${{ vars.VPS_HOST }}
+          username: deploy
+          key: ${{ secrets.DEPLOY_SSH_PRIVATE_KEY }}
+          script: |
+            set -euo pipefail
+
+            echo "==> Checking service health after restore..."
+            for i in $(seq 1 24); do
+              api_health=$(docker inspect --format='{{.State.Health.Status}}' isnad-graph-api-1 2>/dev/null || echo "not_found")
+              echo "Attempt $i/24: API=$api_health"
+              if [ "$api_health" = "healthy" ]; then
+                echo "API health check passed after restore"
+                break
+              fi
+              if [ "$i" -eq 24 ]; then
+                echo "::error::API health check failed after restore — manual intervention required"
+                docker compose -f /opt/isnad-graph/docker-compose.prod.yml logs --tail=50 api
+                exit 1
+              fi
+              sleep 5
+            done
+
+            docker compose -f /opt/isnad-graph/docker-compose.prod.yml ps --format '{{.Name}}\t{{.Status}}'
+
+      - name: Report restore status
+        if: always()
+        run: |
+          echo "## Restore Status: ${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Backup source:** ${{ inputs.backup_path }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Code rollback:** ${{ inputs.rollback_code }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- **Triggered by:** ${{ github.actor }}" >> "$GITHUB_STEP_SUMMARY"
