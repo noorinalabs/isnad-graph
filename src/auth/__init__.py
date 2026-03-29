@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from src.auth.models import TokenResponse, User
+from src.auth.models import TokenResponse, User, UserPublic
 from src.auth.providers import PROVIDERS, OAuthProvider, OAuthUserInfo, get_provider
 from src.auth.tokens import (
     create_access_token,
@@ -17,6 +17,7 @@ __all__ = [
     "OAuthUserInfo",
     "TokenResponse",
     "User",
+    "UserPublic",
     "create_access_token",
     "create_refresh_token",
     "get_provider",
