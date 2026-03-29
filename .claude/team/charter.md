@@ -568,6 +568,8 @@ When starting any work session, the orchestrating Claude instance should:
 
 > **Agent tool limitation:** Spawned agents (including the Manager, leads, and engineers) do NOT have access to the Agent tool. They cannot spawn other agents. All agent spawning must be done by the orchestrating Claude instance. Spawned agents should use SendMessage to request new agents be created, providing the full context needed for the new agent's prompt.
 
+> **Completion reporting is mandatory:** Every spawned agent MUST send a final status message to the team lead via SendMessage before going idle. This message must include: (1) what was accomplished, (2) any issues or blockers, (3) what the team lead should do next (e.g., "spawn engineers with this plan" or "merge these PRs"). An agent that completes work but goes silent without reporting forces the orchestrator to reconstruct state manually, which wastes time and risks missed context. If an agent fails to report, the orchestrator should assume it stalled and check its work directly (branch exists? issues created? PRs filed?).
+
 ### Team Lifecycle (TeamCreate / TeamDelete)
 
 At the start of every wave or work session that requires agents:
