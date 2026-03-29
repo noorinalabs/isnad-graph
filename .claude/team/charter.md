@@ -669,3 +669,86 @@ After every wave completes and the deployments branch is PR'd to main:
 1. Scan `docs/`, `docs/diagrams/`, and `README.md` against the changes in the PR.
 2. Update any stale diagrams or documentation.
 3. The System Architect (Renaud) owns diagram accuracy; the Manager owns doc accuracy.
+
+## Automated Skills (Claude Code)
+
+The following Claude Code skills automate recurring team processes. Each skill is a markdown file in `.claude/skills/` and is invoked via `/skill-name` in Claude Code.
+
+### `/wave-kickoff` — Automated Wave Planning
+
+**Skill file:** `.claude/skills/wave-kickoff.md`
+
+**Replaces manual steps in:** § Branching Rules (deployments branch creation), § Wave Planning & Priority (priority ordering), § GitHub Label Hygiene (label creation/validation), § Implementation Kickoff & Issue Assignment (labeling and kickoff comments).
+
+**What is automated:**
+- Deployments branch creation from main
+- Wave label creation and validation
+- Issue labeling (wave label + assignee label)
+- Kickoff comments on each issue with reviewer assignments
+- Execution plan generation with priority ordering (hotfixes → security → bugs → features)
+
+**What remains manual:**
+- User must approve the execution plan before implementation starts
+- User decides which issues to include in the wave
+- Cross-team dependency resolution still requires lead coordination
+
+**Emergency override:** Skip the skill and perform each step manually using `gh` CLI commands per § Branching Rules and § Implementation Kickoff & Issue Assignment.
+
+### `/wave-retro` — Automated Wave Retrospective
+
+**Skill file:** `.claude/skills/wave-retro.md`
+
+**Replaces manual steps in:** § Wave Retrospectives (retro conversations, consolidation, process change proposals), § Feedback System (trust matrix updates, feedback logging), § Trust Identity Matrix (directional score adjustments).
+
+**What is automated:**
+- Merged PR and review comment collection
+- Per-engineer performance assessment (CI failures, must-fix counts, delivery quality)
+- Trust matrix updates on `CEO/0000-Trust_Matrix` branch
+- Feedback log append to `.claude/team/feedback_log.md`
+- Charter change proposals based on retro findings
+
+**What remains manual:**
+- User must approve all charter changes before they are applied
+- Subjective severity calibration may need user override
+- User can veto specific trust matrix adjustments
+
+**Emergency override:** Run the retro manually per § Wave Retrospectives — Manager spawns retro conversations with leads, consolidates findings, presents to user.
+
+### `/team-reset` — Transparent Team Lifecycle Management
+
+**Skill file:** `.claude/skills/team-reset.md`
+
+**Replaces manual steps in:** § Team Lifecycle (TeamCreate / TeamDelete) (teardown transparency, force teardown, roster change reporting).
+
+**What is automated:**
+- Current team roster reporting to user
+- Shutdown requests to all active agents
+- Force teardown of unresponsive agents (config file cleanup)
+- TeamDelete and TeamCreate calls
+- Roster change highlighting (departures, hires, role changes)
+
+**What remains manual:**
+- The orchestrating Claude instance must still spawn individual agents after team creation
+- Roster file changes (hires/fires) must be committed separately
+- User may override the roster before TeamCreate
+
+**Emergency override:** Manually remove the config file (`~/.claude/teams/isnad-graph/config.json`) and recreate via TeamCreate.
+
+### `/wave-audit` — Close Orphaned Issues After Wave
+
+**Skill file:** `.claude/skills/wave-audit.md`
+
+**Replaces manual steps in:** § Issue Hygiene (close condition enforcement), § Bug Closure (closing issues when fix PRs merge).
+
+**What is automated:**
+- Cross-referencing merged PRs against open issues for the wave
+- Identifying orphans (implemented but not auto-closed) via `Closes #N` references and branch naming
+- Closing orphans with proper comments and `fixed-in-phase{N}-wave{M}` labels
+- Summary reporting of audit results
+
+**What remains manual:**
+- User must approve all closures before they execute
+- Issues with no implementing PR require manual triage
+- The skill relies on `Closes #N` references and branch naming — it does not verify implementation content
+
+**Emergency override:** Run `gh issue list --state open --label "p{N}-wave-{M}"` and close issues manually with `gh issue close`.
