@@ -424,6 +424,7 @@ For each wave, the Tech Lead assigns specific peer reviewers **at wave kickoff, 
 - Pairing rotates each wave to spread knowledge
 - The reviewer is responsible for running `make check` on the branch locally
 - **No PR may be merged without at least one peer review comment on the PR.** If the reviewer has no issues, they must still post an explicit approval comment (e.g., "Reviewed, LGTM"). This is a hard gate — not optional.
+- **Spawn prompts MUST include review pairings.** Agents read the charter once at spawn and may not re-check. Every code-writing agent's spawn prompt must include: (1) who their designated peer reviewer is, (2) "After creating your PR, notify [reviewer name] via SendMessage with the PR URL", (3) "If available, review your peer's PR while waiting." Relying on the charter alone is insufficient — agents that don't see review instructions in their prompt will go idle after creating PRs.
 
 ### Tech Debt Triage (Submitter)
 
@@ -583,6 +584,13 @@ At the start of every wave or work session that requires agents:
 
 This must be transparent. The user wants visibility into team lifecycle transitions.
 
+**Force teardown for unresponsive agents:** If `TeamDelete` fails with "Cannot cleanup team with N active members":
+1. Send `shutdown_request` to ALL agents first — some may respond.
+2. Wait a few seconds.
+3. If still stuck, manually edit the config file to remove stale members: `~/.claude/teams/{team-name}/config.json` — keep only the `team-lead` entry.
+4. Then `TeamDelete` will succeed.
+5. Proceed with `TeamCreate`.
+
 > **Small wave optimization:** For waves with ≤8 issues where all work is well-defined (bugs with clear fixes, straightforward chores), the orchestrator may skip spawning the lead layer (Sunita, Dmitri) and spawn engineers directly after the Manager provides the execution plan. For larger waves (>8 issues) or waves with architectural ambiguity, spawn leads as coordination-only agents to manage delegation and cross-team dependencies.
 
 ## Wave Planning & Priority
@@ -590,11 +598,12 @@ This must be transparent. The user wants visibility into team lifecycle transiti
 ### Priority Order
 
 The standard priority order for every wave is:
-1. **Security fixes** (must-fix and should-fix from security reviews)
-2. **Bug fixes**
-3. **Feature development / chores**
+1. **Hotfixes** (unreviewed commits pushed directly to main from prior wave deploy failures)
+2. **Security fixes** (must-fix and should-fix from security reviews)
+3. **Bug fixes**
+4. **Feature development / chores**
 
-All open bugs must be addressed before starting new feature work. If a phase has outstanding bugs, Wave 1 addresses them; new features start in Wave 2 or later.
+Hotfixes represent known-fragile production state and must be consolidated/reviewed before any new work. All open bugs must be addressed before starting new feature work. If a phase has outstanding bugs, Wave 1 addresses them; new features start in Wave 2 or later.
 
 ### Wave Retrospectives
 
