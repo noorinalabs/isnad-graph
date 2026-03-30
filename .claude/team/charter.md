@@ -702,6 +702,16 @@ When a deployments branch PR is merged to main, create a GitHub release:
 - **Title:** Same as the PR title
 - **Body:** Same as the PR body
 
+### Post-Wave Production Deployment & Verification
+
+**After every wave completes and the deployments branch is merged to main**, the team MUST:
+1. Verify the Deploy workflow ran successfully: `gh run list --workflow=deploy.yml --limit 1`
+2. Spot-check the live site at `https://isnad-graph.noorinalabs.com` to confirm the deployment is working
+3. Report any deployment failures or regressions to the Manager immediately
+4. The Manager includes deployment verification status in the wave completion report to the user
+
+**No wave is considered complete until the deployment is verified on production.** If the deploy workflow fails, the DevOps Engineer (Tomasz) investigates and fixes before proceeding to the next wave.
+
 ### Documentation Maintenance
 
 After every wave completes and the deployments branch is PR'd to main:
