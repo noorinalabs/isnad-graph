@@ -1,0 +1,96 @@
+[
+  {
+    "name": "ner",
+    "scale": 100,
+    "wall_seconds": 0.038,
+    "peak_memory_mb": 0.96,
+    "extra": {}
+  },
+  {
+    "name": "disambiguate",
+    "scale": 100,
+    "wall_seconds": 0.023,
+    "peak_memory_mb": 0.08,
+    "extra": {}
+  },
+  {
+    "name": "dedup",
+    "scale": 100,
+    "wall_seconds": 21.208,
+    "peak_memory_mb": 290.87,
+    "extra": {
+      "faiss_index_bytes": 307245,
+      "faiss_index_mb": 0.29,
+      "embeddings_bytes": 307328,
+      "embeddings_mb": 0.29
+    }
+  },
+  {
+    "name": "ner",
+    "scale": 1000,
+    "wall_seconds": 0.23,
+    "peak_memory_mb": 2.31,
+    "extra": {}
+  },
+  {
+    "name": "disambiguate",
+    "scale": 1000,
+    "wall_seconds": 0.224,
+    "peak_memory_mb": 0.69,
+    "extra": {}
+  },
+  {
+    "name": "dedup",
+    "scale": 1000,
+    "wall_seconds": 5.13,
+    "peak_memory_mb": 76.67,
+    "extra": {
+      "faiss_index_bytes": 3072045,
+      "faiss_index_mb": 2.93,
+      "embeddings_bytes": 3072128,
+      "embeddings_mb": 2.93
+    }
+  },
+  {
+    "name": "ner",
+    "scale": 5000,
+    "wall_seconds": 1.239,
+    "peak_memory_mb": 10.34,
+    "extra": {}
+  },
+  {
+    "name": "disambiguate",
+    "scale": 5000,
+    "wall_seconds": 1.206,
+    "peak_memory_mb": 3.46,
+    "extra": {}
+  },
+  {
+    "name": "dedup",
+    "scale": 5000,
+    "wall_seconds": 12.631,
+    "peak_memory_mb": 78.58,
+    "extra": {
+      "faiss_index_bytes": 15360045,
+      "faiss_index_mb": 14.65,
+      "embeddings_bytes": 15360128,
+      "embeddings_mb": 14.65
+    }
+  },
+  {
+    "name": "ner_sequential",
+    "scale": 1500,
+    "wall_seconds": 0.52,
+    "peak_memory_mb": 2.31,
+    "extra": {}
+  },
+  {
+    "name": "ner_concurrent_estimate",
+    "scale": 1500,
+    "wall_seconds": 0.208,
+    "peak_memory_mb": 6.23,
+    "extra": {
+      "note": "Estimated: wall ~= single-source + 20% overhead; memory ~= N * per-source * 0.9"
+    }
+  }
+]
