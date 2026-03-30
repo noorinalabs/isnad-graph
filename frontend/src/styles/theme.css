@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+/*
+ * Design token layer — CSS custom properties for theming.
+ * These tokens are placeholders for Sable's design system.
+ * Override in a separate theme file or via JS to rebrand.
+ */
+@theme {
+  /* --- Colors --- */
+  --color-primary: #1a73e8;
+  --color-primary-foreground: #ffffff;
+  --color-secondary: #f1f3f4;
+  --color-secondary-foreground: #202124;
+  --color-muted: #f8f9fa;
+  --color-muted-foreground: #5f6368;
+  --color-accent: #e8f0fe;
+  --color-accent-foreground: #1a73e8;
+  --color-destructive: #d93025;
+  --color-destructive-foreground: #ffffff;
+  --color-border: #dadce0;
+  --color-input: #dadce0;
+  --color-ring: #1a73e8;
+  --color-background: #ffffff;
+  --color-foreground: #202124;
+  --color-card: #ffffff;
+  --color-card-foreground: #202124;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #202124;
+
+  /* --- Sectarian colors (domain-specific) --- */
+  --color-sunni: #2e7d32;
+  --color-sunni-bg: #e8f5e9;
+  --color-shia: #1565c0;
+  --color-shia-bg: #e3f2fd;
+
+  /* --- Grading colors --- */
+  --color-sahih: #137333;
+  --color-sahih-bg: #e6f4ea;
+  --color-hasan: #e37400;
+  --color-hasan-bg: #fef7e0;
+
+  /* --- Radii --- */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+
+  /* --- Spacing --- */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+}
+
+/*
+ * Base layer: minimal resets and defaults.
+ * Uses CSS logical properties for BiDi/RTL support.
+ */
+@layer base {
+  *,
+  *::before,
+  *::after {
+    border-color: var(--color-border);
+  }
+
+  body {
+    color: var(--color-foreground);
+    background: var(--color-background);
+  }
+
+  /* RTL-aware focus ring */
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
