@@ -57,10 +57,10 @@ jobs:
 
             export CACHEBUST=$(date +%s)
 
-            docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate --remove-orphans
 
             echo "==> Waiting for services to stabilize..."
-            sleep 10
+            sleep 15
 
       - name: Verify health check
         uses: appleboy/ssh-action@v1
