@@ -41,26 +41,25 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "==> Writing .env for docker-compose..."
-            printf '%s\n' \
-              "NEO4J_PASSWORD=$NEO4J_PASSWORD" \
-              "POSTGRES_USER=$POSTGRES_USER" \
-              "POSTGRES_PASSWORD=$POSTGRES_PASSWORD" \
-              "POSTGRES_DB=$POSTGRES_DB" \
-              "REDIS_PASSWORD=$REDIS_PASSWORD" \
-              "AUTH_GOOGLE_CLIENT_ID=$AUTH_GOOGLE_CLIENT_ID" \
-              "AUTH_GOOGLE_CLIENT_SECRET=$AUTH_GOOGLE_CLIENT_SECRET" \
-              "AUTH_GITHUB_CLIENT_ID=$AUTH_GITHUB_CLIENT_ID" \
-              "AUTH_GITHUB_CLIENT_SECRET=$AUTH_GITHUB_CLIENT_SECRET" \
-              "CACHEBUST=$(date +%s)" \
-              > .env
-            chmod 600 .env
+            echo "==> Updating .env for docker-compose..."
+            touch .env
+            source .env 2>/dev/null || true
+            export NEO4J_PASSWORD="$NEO4J_PASSWORD"
+            export POSTGRES_USER="$POSTGRES_USER"
+            export POSTGRES_PASSWORD="$POSTGRES_PASSWORD"
+            export POSTGRES_DB="$POSTGRES_DB"
+            export REDIS_PASSWORD="$REDIS_PASSWORD"
+            export AUTH_GOOGLE_CLIENT_ID="$AUTH_GOOGLE_CLIENT_ID"
+            export AUTH_GOOGLE_CLIENT_SECRET="$AUTH_GOOGLE_CLIENT_SECRET"
+            export AUTH_GITHUB_CLIENT_ID="$AUTH_GITHUB_CLIENT_ID"
+            export AUTH_GITHUB_CLIENT_SECRET="$AUTH_GITHUB_CLIENT_SECRET"
+            export CACHEBUST="$(date +%s)"
 
             echo "==> Building and starting services..."
             echo "==> Pulling GHCR image for API (falls back to local build)..."
             docker compose -f docker-compose.prod.yml pull api 2>/dev/null || echo "GHCR pull failed — will build locally"
 
-            docker compose -f docker-compose.prod.yml --env-file .env up -d --build --force-recreate --remove-orphans
+            docker compose -f docker-compose.prod.yml up -d --build --force-recreate --remove-orphans
 
             echo "==> Waiting for services to stabilize..."
             sleep 15
