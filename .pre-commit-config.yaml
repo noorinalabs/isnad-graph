@@ -72,7 +72,7 @@ repos:
 
       - id: pytest-unit
         name: pytest-unit
-        entry: bash -c 'ENVIRONMENT=test uv run pytest tests/ -x --tb=short -q -m "not integration and not e2e"'
+        entry: bash -c 'ENVIRONMENT=test uv run pytest tests/ -x --tb=short -q -m "not integration and not e2e and not ml"'
         language: system
         pass_filenames: false
         stages: [pre-commit]
