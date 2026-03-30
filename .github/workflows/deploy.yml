@@ -47,6 +47,8 @@ jobs:
             echo "==> Pulling GHCR image for API (falls back to local build)..."
             docker compose -f docker-compose.prod.yml pull api 2>/dev/null || echo "GHCR pull failed — will build locally"
 
+            export CACHEBUST=$(date +%s)
+
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
             echo "==> Waiting for services to stabilize..."
