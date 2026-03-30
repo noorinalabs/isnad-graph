@@ -114,7 +114,7 @@ export default function GraphExplorerPage() {
               >
                 <span style={{ direction: 'rtl' }}>{n.name_ar}</span>
                 {n.name_en && (
-                  <span style={{ marginLeft: '0.5rem', color: '#666' }}>
+                  <span style={{ marginInlineStart: '0.5rem', color: 'var(--color-muted-foreground)' }}>
                     ({n.name_en})
                   </span>
                 )}
