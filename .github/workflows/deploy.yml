@@ -44,6 +44,9 @@ jobs:
             export POSTGRES_DB="$POSTGRES_DB"
             export REDIS_PASSWORD="$REDIS_PASSWORD"
 
+            echo "==> Pulling GHCR image for API (falls back to local build)..."
+            docker compose -f docker-compose.prod.yml pull api 2>/dev/null || echo "GHCR pull failed — will build locally"
+
             docker compose -f docker-compose.prod.yml up -d --build --remove-orphans
 
             echo "==> Waiting for services to stabilize..."

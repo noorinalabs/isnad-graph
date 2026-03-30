@@ -115,6 +115,7 @@ services:
     restart: unless-stopped
 
   api:
+    image: ghcr.io/parametrization/isnad-graph:${IMAGE_TAG:-latest}
     build: .
     expose:
       - "8000"
