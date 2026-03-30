@@ -148,12 +148,24 @@ export interface GraphNode {
   name_en: string | null
   type: string
   generation: string | null
+  community_id: number | null
+  in_degree: number | null
+  out_degree: number | null
+  betweenness_centrality: number | null
+  pagerank: number | null
+  sect_affiliation: string | null
+  trustworthiness_consensus: string | null
+  death_year_ah: number | null
+  birth_year_ah: number | null
+  kunya: string | null
+  nisba: string | null
 }
 
 export interface GraphEdge {
   source: string
   target: string
   relationship: string
+  weight: number
 }
 
 export interface NarratorNetworkResponse {

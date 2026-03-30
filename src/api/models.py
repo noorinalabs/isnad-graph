@@ -178,6 +178,17 @@ class GraphNode(BaseModel):
     name_en: str | None = None
     type: str
     generation: str | None = None
+    community_id: int | None = None
+    in_degree: int | None = None
+    out_degree: int | None = None
+    betweenness_centrality: float | None = None
+    pagerank: float | None = None
+    sect_affiliation: str | None = None
+    trustworthiness_consensus: str | None = None
+    death_year_ah: int | None = None
+    birth_year_ah: int | None = None
+    kunya: str | None = None
+    nisba: str | None = None
 
 
 class GraphEdge(BaseModel):
@@ -188,6 +199,7 @@ class GraphEdge(BaseModel):
     source: str
     target: str
     relationship: str
+    weight: int = 1
 
 
 class ChainSummary(BaseModel):

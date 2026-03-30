@@ -74,37 +74,52 @@ def test_hadith_chain_not_found(client: TestClient) -> None:
 
 def test_narrator_network_found(client: TestClient, mock_neo4j: MagicMock) -> None:
     """GET /api/v1/graph/narrator/{id}/network returns ego network."""
+    _narrator_fields = {
+        "id": "nar-001",
+        "name_ar": "الراوي المركزي",
+        "name_en": "Central Narrator",
+        "gen": "companion",
+        "community_id": 1,
+        "in_degree": 2,
+        "out_degree": 3,
+        "betweenness_centrality": 0.05,
+        "pagerank": 0.002,
+        "sect_affiliation": "sunni",
+        "trustworthiness_consensus": "thiqah",
+        "death_year_ah": 59,
+        "birth_year_ah": None,
+        "kunya": None,
+        "nisba": None,
+    }
     mock_neo4j.execute_read.side_effect = [
-        # exists check
+        # 1: exists check
         [{"id": "nar-001"}],
-        # student rows
+        # 2: center node fields
+        [_narrator_fields],
+        # 3: neighbors at depth
         [
             {
-                "id": "nar-020",
-                "name_ar": "الطالب",
-                "name_en": "Student",
-                "gen": "successor",
-                "rel": "student",
-            }
-        ],
-        # teacher rows
-        [
-            {
+                **_narrator_fields,
                 "id": "nar-010",
                 "name_ar": "المعلم",
                 "name_en": "Teacher",
                 "gen": "companion",
-                "rel": "teacher",
-            }
-        ],
-        # center row
-        [
+            },
             {
-                "center_name_ar": "الراوي المركزي",
-                "center_name_en": "Central Narrator",
-                "center_gen": "companion",
-            }
+                **_narrator_fields,
+                "id": "nar-020",
+                "name_ar": "الطالب",
+                "name_en": "Student",
+                "gen": "successor",
+            },
         ],
+        # 4: TRANSMITTED_TO edges
+        [
+            {"source": "nar-010", "target": "nar-001", "rel": "TRANSMITTED_TO", "weight": 1},
+            {"source": "nar-001", "target": "nar-020", "rel": "TRANSMITTED_TO", "weight": 1},
+        ],
+        # 5: STUDIED_UNDER edges
+        [],
     ]
     resp = client.get("/api/v1/graph/narrator/nar-001/network")
     assert resp.status_code == 200
