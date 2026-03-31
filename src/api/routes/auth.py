@@ -136,8 +136,15 @@ async def callback(provider: str, code: str, state: str, request: Request) -> Re
 
 @router.post("/auth/refresh", response_model=TokenResponse)
 def refresh(request: Request) -> TokenResponse:
-    """Refresh an access token using the refresh token from httpOnly cookie."""
+    """Refresh an access token using a refresh token.
+
+    Accepts the refresh token from an httpOnly cookie or Authorization header.
+    """
     refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        auth_header = request.headers.get("authorization", "")
+        if auth_header.startswith("Bearer "):
+            refresh_token = auth_header[7:]
     if not refresh_token:
         raise HTTPException(status_code=401, detail="Missing refresh token")
 

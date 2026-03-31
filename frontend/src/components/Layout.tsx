@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
-import ThemeToggle from './ThemeToggle'
+import UserMenu from './UserMenu'
 
 export default function Layout() {
   return (
@@ -31,7 +31,7 @@ export default function Layout() {
         <span className="small-muted" style={{ fontFamily: 'var(--font-heading)' }}>
           Hadith Analysis Platform
         </span>
-        <ThemeToggle />
+        <UserMenu />
       </header>
       <div style={{ display: 'flex', flex: 1 }}>
         <Sidebar />
