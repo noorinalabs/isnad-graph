@@ -50,9 +50,9 @@ jobs:
                        AUTH_GITHUB_CLIENT_ID AUTH_GITHUB_CLIENT_SECRET \
                        GRAFANA_ADMIN_PASSWORD; do
               eval "val=\$$var"
-              echo "$var=$val" >> "$env_file"
+              echo "$var=\"$val\"" >> "$env_file"
             done
-            echo "CACHEBUST=$(date +%s)" >> "$env_file"
+            echo "CACHEBUST=\"$(date +%s)\"" >> "$env_file"
             chmod 600 "$env_file"
 
             echo "==> Building and starting services..."
