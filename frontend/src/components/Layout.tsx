@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
-import ThemeToggle from './ThemeToggle'
+import UserMenu from './UserMenu'
 
 export default function Layout() {
   return (
@@ -19,7 +19,7 @@ export default function Layout() {
           Isnad Graph
         </h1>
         <span className="small-muted">Hadith Analysis Platform</span>
-        <ThemeToggle />
+        <UserMenu />
       </header>
       <div style={{ display: 'flex', flex: 1 }}>
         <Sidebar />
