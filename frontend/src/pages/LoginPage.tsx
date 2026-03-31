@@ -175,7 +175,7 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-sm space-y-6 rounded-2xl border border-border bg-card p-10 shadow-xl">
+      <div className="w-full max-w-[480px] space-y-6 rounded-2xl border border-border bg-card p-10 shadow-xl">
         {/* Geometric accent line */}
         <div className="geo-border-top" />
 

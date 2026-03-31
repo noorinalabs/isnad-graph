@@ -124,11 +124,12 @@ export default function SearchPage() {
   })
 
   // Full search query
-  const { data: searchData, isLoading, isError } = useQuery({
+  const { data: searchData, isLoading, isError, error: searchError } = useQuery({
     queryKey: ['search', query, mode],
     queryFn: () =>
       mode === 'semantic' ? searchSemantic(query, 200) : searchAll(query, 200),
     enabled: query.length >= 2,
+    retry: 1,
   })
 
   // Close typeahead on outside click
@@ -387,7 +388,7 @@ export default function SearchPage() {
       <form onSubmit={handleSubmit} className="mb-4">
         <div className="relative">
           <div className="flex gap-2 items-center">
-            <div className="relative flex-1 max-w-xl">
+            <div className="relative flex-1">
               <Input
                 ref={inputRef}
                 type="text"
@@ -473,7 +474,7 @@ export default function SearchPage() {
             <div
               ref={typeaheadRef}
               role="listbox"
-              className="absolute z-50 top-14 start-0 w-full max-w-xl bg-popover border rounded-md shadow-lg overflow-hidden"
+              className="absolute z-50 top-14 start-0 w-full bg-popover border rounded-md shadow-lg overflow-hidden"
             >
               {isLoading && (
                 <div className="p-3 text-sm text-muted-foreground">Searching...</div>
@@ -689,7 +690,12 @@ export default function SearchPage() {
             {isError && (
               <Card className="text-center">
                 <CardContent className="py-8">
-                  <p className="mb-2">Search failed. Please try again.</p>
+                  <p className="font-medium mb-2">Search failed</p>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {searchError instanceof Error
+                      ? searchError.message
+                      : 'An unexpected error occurred. Please try again.'}
+                  </p>
                   <Button
                     variant="outline"
                     onClick={() => setQuery(inputValue)}

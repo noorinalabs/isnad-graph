@@ -1,6 +1,41 @@
-import { useRef, useEffect, useCallback, useMemo } from 'react'
+import { useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import ForceGraph2D, { type ForceGraphMethods } from 'react-force-graph-2d'
 import type { GraphNode, GraphEdge } from '../types/api'
+
+/** Read current theme colors from CSS custom properties. */
+function getThemeColors() {
+  const style = getComputedStyle(document.documentElement)
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+    document.documentElement.classList.contains('dark')
+  return {
+    background: style.getPropertyValue('--color-background').trim() || '#fafafa',
+    foreground: style.getPropertyValue('--color-foreground').trim() || '#333',
+    card: style.getPropertyValue('--color-card').trim() || '#fff',
+    muted: style.getPropertyValue('--color-muted-foreground').trim() || '#999',
+    // Pre-computed link colors for canvas (canvas doesn't reliably support color-mix)
+    linkDefault: isDark ? 'rgba(160, 160, 160, 0.4)' : 'rgba(204, 204, 204, 0.4)',
+    linkActive: isDark ? 'rgba(160, 160, 160, 0.8)' : 'rgba(204, 204, 204, 0.8)',
+    linkDimmed: isDark ? 'rgba(160, 160, 160, 0.1)' : 'rgba(204, 204, 204, 0.1)',
+  }
+}
+
+/** Hook that returns theme colors and re-reads on data-theme changes. */
+function useThemeColors() {
+  const [colors, setColors] = useState(getThemeColors)
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setColors(getThemeColors())
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['data-theme', 'class'],
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  return colors
+}
 
 /** Hex community palette — CVD-distinguishable, meets AA contrast on #fafafa. */
 const COMMUNITY_HEX = [
@@ -84,6 +119,7 @@ export default function ForceGraph({
   height,
 }: ForceGraphProps) {
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined)
+  const themeColors = useThemeColors()
 
   const graphData = useMemo(
     () => ({
@@ -190,7 +226,7 @@ export default function ForceGraph({
       ctx.arc(x, y, r, 0, 2 * Math.PI)
       ctx.fillStyle = color
       ctx.fill()
-      ctx.strokeStyle = '#fff'
+      ctx.strokeStyle = themeColors.card
       ctx.lineWidth = 1.5
       ctx.stroke()
 
@@ -216,7 +252,7 @@ export default function ForceGraph({
           ctx.font = `${fontSize}px sans-serif`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'top'
-          ctx.fillStyle = '#333'
+          ctx.fillStyle = themeColors.foreground
           ctx.fillText(labelText, x, y + r + 2)
         }
 
@@ -225,14 +261,14 @@ export default function ForceGraph({
           ctx.font = `${fontSize}px 'Noto Naskh Arabic', serif`
           ctx.textAlign = 'center'
           ctx.textBaseline = 'bottom'
-          ctx.fillStyle = '#333'
+          ctx.fillStyle = themeColors.foreground
           ctx.fillText(node.name_ar, x, y - r - 2)
         }
       }
 
       ctx.globalAlpha = 1.0
     },
-    [nodeMap, selectedNodeId, highlightedChainNodeIds, adjacentNodes],
+    [nodeMap, selectedNodeId, highlightedChainNodeIds, adjacentNodes, themeColors],
   )
 
   const linkColor = useCallback(
@@ -250,19 +286,19 @@ export default function ForceGraph({
         ) {
           return ACCENT
         }
-        return 'rgba(204, 204, 204, 0.1)'
+        return themeColors.linkDimmed
       }
 
       if (selectedNodeId) {
         if (sourceId === selectedNodeId || targetId === selectedNodeId) {
-          return 'rgba(204, 204, 204, 0.8)'
+          return themeColors.linkActive
         }
-        return 'rgba(204, 204, 204, 0.1)'
+        return themeColors.linkDimmed
       }
 
-      return 'rgba(204, 204, 204, 0.4)'
+      return themeColors.linkDefault
     },
-    [selectedNodeId, highlightedChainNodeIds],
+    [selectedNodeId, highlightedChainNodeIds, themeColors],
   )
 
   const linkWidthCb = useCallback(
@@ -296,6 +332,7 @@ export default function ForceGraph({
       graphData={graphData}
       width={width}
       height={height ?? 600}
+      backgroundColor={themeColors.background}
       nodeCanvasObject={nodeCanvasObject}
       nodePointerAreaPaint={(obj: object, color: string, ctx: CanvasRenderingContext2D) => {
         const node = obj as InternalNode
