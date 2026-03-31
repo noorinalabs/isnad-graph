@@ -1,6 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import UserMenu from './UserMenu'
+import { PageHeaderAccent } from './icons/decorative'
 
 export default function Layout() {
   return (
@@ -26,6 +27,7 @@ export default function Layout() {
             flex: 1,
           }}
         >
+          <PageHeaderAccent style={{ display: 'inline-block', verticalAlign: 'middle', marginInlineEnd: 6 }} />
           Isnad Graph
         </h1>
         <span className="small-muted" style={{ fontFamily: 'var(--font-heading)' }}>
