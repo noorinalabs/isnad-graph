@@ -93,7 +93,25 @@ export default function HadithDetailPage() {
   }
 
   const parallels = parallelsData?.parallels ?? []
-  const citation = `${hadith.source_corpus}, Hadith ${hadith.id}.`
+  const citation = `${hadith.display_title || hadith.source_corpus}, Hadith ${hadith.id}. Retrieved from isnad-graph.noorinalabs.com`
+  const shortCitation = `${hadith.display_title || hadith.source_corpus}, Hadith ${hadith.id}.`
+
+  const handleShare = async () => {
+    const url = window.location.href
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${hadith.display_title || hadith.source_corpus} - Hadith ${hadith.id}`,
+          text: shortCitation,
+          url,
+        })
+        return
+      } catch {
+        // User cancelled or Web Share API failed — fall through to clipboard
+      }
+    }
+    await copyToClipboard(url, 'share')
+  }
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -104,7 +122,7 @@ export default function HadithDetailPage() {
         </Link>
         <span className="mx-1.5">/</span>
         <span className="text-foreground">
-          {hadith.source_corpus} &mdash; {hadith.id}
+          {hadith.display_title || hadith.id}
         </span>
       </nav>
 
@@ -113,7 +131,7 @@ export default function HadithDetailPage() {
         <CardContent className="py-6">
           <div className="flex items-center gap-3 mb-4">
             <h2 className="text-xl font-semibold">
-              {hadith.source_corpus} &mdash; {hadith.id}
+              {hadith.display_title || hadith.id}
             </h2>
             {hadith.grade_composite && (
               <span
@@ -207,10 +225,16 @@ export default function HadithDetailPage() {
                 Metadata
               </h4>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1.5 text-sm">
-                <dt className="font-medium text-muted-foreground">Collection</dt>
+                {hadith.collection_name && (
+                  <>
+                    <dt className="font-medium text-muted-foreground">Collection</dt>
+                    <dd>{hadith.collection_name}</dd>
+                  </>
+                )}
+                <dt className="font-medium text-muted-foreground">Source Corpus</dt>
                 <dd>{hadith.source_corpus}</dd>
-                <dt className="font-medium text-muted-foreground">Hadith No.</dt>
-                <dd>{hadith.id}</dd>
+                <dt className="font-medium text-muted-foreground">Hadith ID</dt>
+                <dd className="font-mono text-xs">{hadith.id}</dd>
                 {hadith.has_sunni_parallel && (
                   <>
                     <dt className="font-medium text-muted-foreground">Sunni parallel</dt>
@@ -319,10 +343,17 @@ export default function HadithDetailPage() {
       {/* Citation & Share */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">Citation</CardTitle>
+          <CardTitle className="text-lg">Cite &amp; Share</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm mb-3">{citation}</p>
+          <div className="mb-4">
+            <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+              Academic Citation
+            </h4>
+            <p className="text-sm p-3 rounded-md bg-muted/30 font-mono leading-relaxed">
+              {citation}
+            </p>
+          </div>
           <div className="flex flex-wrap gap-2" aria-live="polite">
             <Button
               variant="outline"
@@ -350,9 +381,16 @@ export default function HadithDetailPage() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => copyToClipboard(window.location.href, 'share')}
+              onClick={() => copyToClipboard(window.location.href, 'link')}
             >
-              {copiedField === 'share' ? 'Copied!' : 'Share'}
+              {copiedField === 'link' ? 'Link copied!' : 'Copy link'}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleShare}
+            >
+              {copiedField === 'share' ? 'Link copied!' : 'Share'}
             </Button>
           </div>
         </CardContent>
