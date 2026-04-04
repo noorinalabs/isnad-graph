@@ -34,7 +34,7 @@ A computational hadith analysis platform that ingests Sunni and Shia hadith coll
 ### 1. Clone and install
 
 ```bash
-git clone git@github.com:parametrization/isnad-graph.git
+git clone git@github.com:noorinalabs/isnad-graph.git
 cd isnad-graph
 make setup          # Install Python deps with uv
 make setup-hooks    # Configure git hooks

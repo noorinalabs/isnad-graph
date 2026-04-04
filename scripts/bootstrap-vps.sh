@@ -4,14 +4,14 @@
 #
 # Run as root on a fresh Hetzner VPS:
 #   ssh -i ~/.ssh/isnad_deploy root@isnad-graph.noorinalabs.com
-#   curl -sL https://raw.githubusercontent.com/parametrization/isnad-graph/main/scripts/bootstrap-vps.sh | bash
+#   curl -sL https://raw.githubusercontent.com/noorinalabs/isnad-graph/main/scripts/bootstrap-vps.sh | bash
 #
 # Or copy this script to the VPS and run:
 #   chmod +x bootstrap-vps.sh && ./bootstrap-vps.sh
 # =============================================================================
 set -euo pipefail
 
-REPO_URL="https://github.com/parametrization/isnad-graph.git"
+REPO_URL="https://github.com/noorinalabs/isnad-graph.git"
 INSTALL_DIR="/opt/isnad-graph"
 DEPLOY_USER="deploy"
 

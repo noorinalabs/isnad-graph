@@ -2,7 +2,7 @@
 #
 # Triggers: tag push matching v* or phase*-wave* patterns.
 # Builds multi-arch (amd64 + arm64) images for the API service
-# and pushes to ghcr.io/parametrization/isnad-graph.
+# and pushes to ghcr.io/noorinalabs/isnad-graph.
 #
 # Manual dispatch is also supported for ad-hoc builds — useful for testing
 # the workflow on a feature branch before tagging. The image will be tagged
@@ -29,7 +29,7 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: parametrization/isnad-graph
+  IMAGE_NAME: noorinalabs/isnad-graph
 
 jobs:
   build-and-push:

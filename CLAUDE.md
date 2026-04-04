@@ -167,8 +167,10 @@ Copy `.env.example` to `.env`. Key variables:
 
 **All work MUST be executed through the simulated team structure.** No work begins without spawning the team.
 
-- **Charter & rules:** `.claude/team/charter.md`
-- **Active roster:** `.claude/team/roster/` (one file per team member with persistent name and personality)
+> **Note:** The authoritative team config (charter, roster, hooks, skills) lives in the parent repo (`noorinalabs_main/.claude/`). This repo retains a local copy for agents working within isnad-graph.
+
+- **Charter & rules:** `.claude/team/charter.md` (canonical: `../../.claude/team/charter.md`)
+- **Active roster:** `.claude/team/roster/` (canonical: `../../.claude/team/roster/`)
 - **Feedback log:** `.claude/team/feedback_log.md`
 
 ### Team Composition

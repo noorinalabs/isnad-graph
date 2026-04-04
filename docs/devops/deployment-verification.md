@@ -52,7 +52,7 @@ After every deployment to production (triggered by push to `main`), we run a sui
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SITE_URL` | `https://isnad-graph.noorinalabs.com` | Target site URL |
-| `GH_REPO` | `parametrization/isnad-graph` | GitHub repository for workflow checks |
+| `GH_REPO` | `noorinalabs/isnad-graph` | GitHub repository for workflow checks |
 | `ROLLBACK_TAG` | (empty) | If set, records current SHA for rollback reference |
 
 ## Automated Verification (CI)

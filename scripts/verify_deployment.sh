@@ -7,7 +7,7 @@
 #
 # Environment:
 #   SITE_URL      Override the default site URL (default: https://isnad-graph.noorinalabs.com)
-#   GH_REPO       Override the GitHub repo for workflow checks (default: parametrization/isnad-graph)
+#   GH_REPO       Override the GitHub repo for workflow checks (default: noorinalabs/isnad-graph)
 #   ROLLBACK_TAG  If set, tag the current deployment for rollback reference
 
 set -euo pipefail
@@ -15,7 +15,7 @@ set -euo pipefail
 # ---------- Configuration ----------
 
 SITE_URL="${SITE_URL:-https://isnad-graph.noorinalabs.com}"
-GH_REPO="${GH_REPO:-parametrization/isnad-graph}"
+GH_REPO="${GH_REPO:-noorinalabs/isnad-graph}"
 SKIP_WORKFLOW="${SKIP_WORKFLOW:-false}"
 SKIP_SSL="${SKIP_SSL:-false}"
 ROLLBACK_TAG="${ROLLBACK_TAG:-}"
