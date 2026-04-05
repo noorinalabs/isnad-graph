@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 SAMPLE_NARRATOR = {
     "id": "nar-001",
-    "name_ar": "أبو هريرة",
+    "name_ar": "\u0623\u0628\u0648 \u0647\u0631\u064a\u0631\u0629",
     "name_en": "Abu Hurayra",
     "generation": "companion",
     "gender": "male",
@@ -54,6 +54,52 @@ def test_list_narrators_pagination(client: TestClient, mock_neo4j: MagicMock) ->
     body = resp.json()
     assert body["page"] == 3
     assert body["limit"] == 10
+
+
+def test_list_narrators_fulltext_search(client: TestClient, mock_neo4j: MagicMock) -> None:
+    """GET /api/v1/narrators?q=... uses single fulltext query for count and results."""
+    mock_neo4j.execute_read.return_value = [
+        {
+            "total": 1,
+            "rows": [{"props": SAMPLE_NARRATOR}],
+        }
+    ]
+    resp = client.get("/api/v1/narrators?q=Abu")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 1
+    assert len(body["items"]) == 1
+    assert body["items"][0]["name_en"] == "Abu Hurayra"
+
+    # Verify only a single execute_read call (no duplicate fulltext query)
+    assert mock_neo4j.execute_read.call_count == 1
+    query = mock_neo4j.execute_read.call_args[0][0]
+    assert "fulltext.queryNodes" in query
+    assert "size(all_rows)" in query
+
+
+def test_list_narrators_fulltext_search_pagination(
+    client: TestClient, mock_neo4j: MagicMock
+) -> None:
+    """Fulltext search paginates correctly with a single query."""
+    mock_neo4j.execute_read.return_value = [
+        {
+            "total": 25,
+            "rows": [{"props": SAMPLE_NARRATOR}],
+        }
+    ]
+    resp = client.get("/api/v1/narrators?q=Abu&page=2&limit=10")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 25
+    assert body["page"] == 2
+    assert body["limit"] == 10
+
+    # Single query execution
+    assert mock_neo4j.execute_read.call_count == 1
+    params = mock_neo4j.execute_read.call_args[0][1]
+    assert params["skip"] == 10
+    assert params["limit"] == 10
 
 
 def test_get_narrator_found(client: TestClient, mock_neo4j: MagicMock) -> None:

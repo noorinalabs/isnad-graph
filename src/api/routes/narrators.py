@@ -27,25 +27,22 @@ def list_narrators(
     skip = (page - 1) * limit
 
     if q:
-        # Use the fulltext index (narrator_search) on [name_ar, name_en].
-        # Wrap in quotes for phrase matching; escape embedded quotes.
+        # Single fulltext query: collect all matches, return total via size()
+        # and paginated slice to avoid executing the fulltext index twice.
         escaped = q.replace("\\", "\\\\").replace('"', '\\"')
         search_term = f'"{escaped}"'
 
-        count_result = neo4j.execute_read(
-            "CALL db.index.fulltext.queryNodes('narrator_search', $term) "
-            "YIELD node RETURN count(node) AS total",
-            {"term": search_term},
-        )
-        total = count_result[0]["total"] if count_result else 0
-
-        rows = neo4j.execute_read(
+        result = neo4j.execute_read(
             "CALL db.index.fulltext.queryNodes('narrator_search', $term) "
             "YIELD node, score "
-            "RETURN properties(node) AS props "
-            "ORDER BY score DESC SKIP $skip LIMIT $limit",
+            "WITH node, score ORDER BY score DESC "
+            "WITH collect({props: properties(node)}) AS all_rows "
+            "RETURN size(all_rows) AS total, "
+            "all_rows[$skip .. $skip + $limit] AS rows",
             {"term": search_term, "skip": skip, "limit": limit},
         )
+        total = result[0]["total"] if result else 0
+        rows = result[0]["rows"] if result else []
     else:
         count_result = neo4j.execute_read(
             "MATCH (n:Narrator) RETURN count(n) AS total",
