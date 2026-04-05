@@ -3,7 +3,7 @@ name: retro
 description: Run a wave retrospective
 ---
 
-Run a wave retrospective for the isnad-graph project.
+Run a wave retrospective for the noorinalabs-isnad-graph project.
 
 ## Instructions
 1. Collect all PRs merged into the current wave's deployments branch: `gh pr list --state merged --base deployments/phase{N}/wave{M}`

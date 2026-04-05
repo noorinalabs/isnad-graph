@@ -3,7 +3,7 @@ name: wave-start
 description: Initialize a new wave
 ---
 
-Initialize a new wave for the isnad-graph project.
+Initialize a new wave for the noorinalabs-isnad-graph project.
 
 ## Instructions
 1. Run `git worktree prune` to clean stale worktrees

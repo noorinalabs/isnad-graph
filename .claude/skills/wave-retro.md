@@ -4,7 +4,7 @@ description: Automated wave retrospective — PR analysis, assessments, trust ma
 args: Phase number, Wave number
 ---
 
-Run a retrospective for a completed wave of the isnad-graph project.
+Run a retrospective for a completed wave of the noorinalabs-isnad-graph project.
 
 ## Instructions
 

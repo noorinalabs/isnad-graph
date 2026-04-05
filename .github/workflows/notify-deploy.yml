@@ -18,7 +18,7 @@ jobs:
           event-type: deploy-isnad-graph
           client-payload: >-
             {
-              "repo": "isnad-graph",
+              "repo": "noorinalabs-isnad-graph",
               "sha": "${{ github.sha }}",
               "ref": "${{ github.ref_name }}",
               "actor": "${{ github.actor }}"

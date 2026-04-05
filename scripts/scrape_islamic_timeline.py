@@ -179,7 +179,7 @@ _MAIN_PAGE = "/wiki/Timeline_of_the_history_of_Islam"
 _CENTURY_TEMPLATE = "/wiki/Timeline_of_the_history_of_Islam_({century}_century)"
 
 _USER_AGENT = (
-    "isnad-graph/0.1 (https://github.com/noorinalabs/isnad-graph; "
+    "isnad-graph/0.1 (https://github.com/noorinalabs/noorinalabs-isnad-graph; "
     "educational research) Python/httpx"
 )
 _REQUEST_DELAY = 1.0  # seconds between requests

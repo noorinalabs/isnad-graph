@@ -3,7 +3,7 @@ name: team-reset
 description: Transparent team teardown and recreation — handles unresponsive agents, reports roster changes
 ---
 
-Handle the team teardown/create lifecycle for the isnad-graph project.
+Handle the team teardown/create lifecycle for the noorinalabs-isnad-graph project.
 
 ## Instructions
 
@@ -12,7 +12,7 @@ Handle the team teardown/create lifecycle for the isnad-graph project.
 Read the current team roster from `.claude/team/roster/` and report to the user:
 
 ```
-**Current team: isnad-graph**
+**Current team: noorinalabs-isnad-graph**
 | Role | Name | Status |
 |------|------|--------|
 | Manager | Fatima Okonkwo | Active |
@@ -39,29 +39,29 @@ If `TeamDelete` fails with "Cannot cleanup team with N active members":
 2. Manually edit the config file to remove stale members:
    ```bash
    # Read current config
-   cat ~/.claude/teams/isnad-graph/config.json
+   cat ~/.claude/teams/noorinalabs-isnad-graph/config.json
    # Keep only team-lead entry, remove all others
    ```
 3. Retry `TeamDelete`
 
 ### 4. Delete the team
 
-Call `TeamDelete` for team `isnad-graph`. Report success or failure to user.
+Call `TeamDelete` for team `noorinalabs-isnad-graph`. Report success or failure to user.
 
 ```
-**Team deleted:** isnad-graph
+**Team deleted:** noorinalabs-isnad-graph
 - Agents terminated: {count}
 - Force removal required: {yes/no}
 ```
 
 ### 5. Create new team
 
-Read all roster files in `.claude/team/roster/` to build the new roster. Call `TeamCreate` for team `isnad-graph`.
+Read all roster files in `.claude/team/roster/` to build the new roster. Call `TeamCreate` for team `noorinalabs-isnad-graph`.
 
 Report to user:
 
 ```
-**Team created:** isnad-graph
+**Team created:** noorinalabs-isnad-graph
 | Role | Name | Status |
 |------|------|--------|
 | Manager | Fatima Okonkwo | Active |
@@ -86,7 +86,7 @@ If no changes: "Roster unchanged from previous team."
 Confirm the team is ready for work:
 
 ```
-Team `isnad-graph` is ready. {N} members active.
+Team `noorinalabs-isnad-graph` is ready. {N} members active.
 Proceed with agent spawning when ready.
 ```
 
@@ -102,6 +102,6 @@ If the skill fails entirely, the manual fallback is:
 
 ```bash
 # Remove stale config
-rm ~/.claude/teams/isnad-graph/config.json
+rm ~/.claude/teams/noorinalabs-isnad-graph/config.json
 # Recreate via TeamCreate
 ```

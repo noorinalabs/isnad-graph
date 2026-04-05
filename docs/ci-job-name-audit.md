@@ -2,11 +2,11 @@
 
 After ANY change to `.github/workflows/ci.yml` that renames or adds/removes jobs:
 
-1. List current CI job names: `gh api repos/noorinalabs/isnad-graph/actions/workflows -q '.workflows[].name'`
-2. Check branch protection required checks: `gh api repos/noorinalabs/isnad-graph/branches/main/protection/required_status_checks`
+1. List current CI job names: `gh api repos/noorinalabs/noorinalabs-isnad-graph/actions/workflows -q '.workflows[].name'`
+2. Check branch protection required checks: `gh api repos/noorinalabs/noorinalabs-isnad-graph/branches/main/protection/required_status_checks`
 3. If mismatched, update branch protection:
    ```bash
-   gh api repos/noorinalabs/isnad-graph/branches/main/protection/required_status_checks \
+   gh api repos/noorinalabs/noorinalabs-isnad-graph/branches/main/protection/required_status_checks \
      -X PATCH --input - <<'EOF'
    {"strict": true, "contexts": ["lint-and-typecheck", "test", "security-audit"]}
    EOF

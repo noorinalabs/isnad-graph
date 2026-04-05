@@ -1,10 +1,10 @@
-# Repo Charter — isnad-graph
+# Repo Charter — noorinalabs-isnad-graph
 
-This charter supplements the org-level charter at `noorinalabs_main/.claude/team/charter.md`. All org charter rules apply. This file contains isnad-graph-specific configuration only.
+This charter supplements the org-level charter at `noorinalabs-main/.claude/team/charter.md`. All org charter rules apply. This file contains noorinalabs-isnad-graph-specific configuration only.
 
 ## team_name
 
-All agents working in this repo use `team_name: "isnad-graph"`.
+All agents working in this repo use `team_name: "noorinalabs-isnad-graph"`.
 
 ## PRD & Scope
 
@@ -14,7 +14,7 @@ All agents working in this repo use `team_name: "isnad-graph"`.
 
 ## Phase System
 
-isnad-graph uses a phased development model. Each phase has detailed specs in `docs/`.
+noorinalabs-isnad-graph uses a phased development model. Each phase has detailed specs in `docs/`.
 
 | Phase | Focus |
 |-------|-------|
@@ -63,7 +63,7 @@ isnad-graph uses a phased development model. Each phase has detailed specs in `d
 
 ## GitHub Repo
 
-- **Slug:** `noorinalabs/isnad-graph`
+- **Slug:** `noorinalabs/noorinalabs-isnad-graph`
 - **Branch protection:** Ruleset ID 14482071 on `deployments/**` branches (requires 1 approving review, dismisses stale reviews)
 
 ## Build & Test Commands

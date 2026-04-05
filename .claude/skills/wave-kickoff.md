@@ -4,7 +4,7 @@ description: Automated wave planning — branch creation, label management, issu
 args: Phase number, Wave number
 ---
 
-Automate the wave kickoff process for the isnad-graph project.
+Automate the wave kickoff process for the noorinalabs-isnad-graph project.
 
 ## Instructions
 

@@ -1,0 +1,82 @@
+{
+  "curated/narrator_mentions_resolved.parquet": {
+    "md5": "4ac0879c01161147e5528cbbe0014b55",
+    "rows": 3296155,
+    "size_bytes": 259000146
+  },
+  "staging/collections_fawaz.parquet": {
+    "md5": "4f30ac9f6741dbbe3e10cb7e4bc38f1a",
+    "rows": 0,
+    "size_bytes": 1485
+  },
+  "staging/collections_lk.parquet": {
+    "md5": "e636ee9810a49457cfe45f5817dae7dc",
+    "rows": 335,
+    "size_bytes": 3789
+  },
+  "staging/collections_sunnah_scraped.parquet": {
+    "md5": "5ff624fe76aa76833ce9b365d77e6e0d",
+    "rows": 5,
+    "size_bytes": 2286
+  },
+  "staging/collections_thaqalayn.parquet": {
+    "md5": "b7027a92f9c9afe82c0758ebb3b8ecb6",
+    "rows": 64,
+    "size_bytes": 3813
+  },
+  "staging/hadiths_fawaz.parquet": {
+    "md5": "bb2a7e80e9d990a21cf6ab4fdad80297",
+    "rows": 0,
+    "size_bytes": 2736
+  },
+  "staging/hadiths_lk.parquet": {
+    "md5": "8fc75c4d0efa65fcd930505e21303007",
+    "rows": 34088,
+    "size_bytes": 37143104
+  },
+  "staging/hadiths_open_hadith.parquet": {
+    "md5": "e01247511ac8c6852a3530984b48775d",
+    "rows": 62160,
+    "size_bytes": 755379
+  },
+  "staging/hadiths_sanadset.parquet": {
+    "md5": "ac82eea65eb05559773c434aa46e7b22",
+    "rows": 650986,
+    "size_bytes": 512331386
+  },
+  "staging/hadiths_sunnah_scraped.parquet": {
+    "md5": "6398286ca9c6d938ea3c1aada1313d44",
+    "rows": 10028,
+    "size_bytes": 9533980
+  },
+  "staging/hadiths_thaqalayn.parquet": {
+    "md5": "b818a48b47492881bc0584fd985bc34e",
+    "rows": 113401,
+    "size_bytes": 87686455
+  },
+  "staging/narrator_mentions_lk.parquet": {
+    "md5": "435e5d015ac5f9f8af26c93a8ba89928",
+    "rows": 86162,
+    "size_bytes": 5523064
+  },
+  "staging/narrator_mentions_sanadset.parquet": {
+    "md5": "4bdd5e466e01b9755bd9fae4ce025ec1",
+    "rows": 2789517,
+    "size_bytes": 63230921
+  },
+  "staging/narrators_bio_kaggle.parquet": {
+    "md5": "62e62114a8dfcf960599c6422d036ca3",
+    "rows": 24326,
+    "size_bytes": 1775405
+  },
+  "staging/narrators_bio_muhaddithat.parquet": {
+    "md5": "7c4b9d0651714137e43598ccf4aa3376",
+    "rows": 113,
+    "size_bytes": 9728
+  },
+  "staging/network_edges_muhaddithat.parquet": {
+    "md5": "4a79a4f4f3286ae5b83f63764c61a75a",
+    "rows": 330,
+    "size_bytes": 7927
+  }
+}

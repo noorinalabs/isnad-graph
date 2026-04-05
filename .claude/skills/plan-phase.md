@@ -4,7 +4,7 @@ description: Plan a phase by creating and reviewing issues
 args: Phase number
 ---
 
-Plan a phase of work for the isnad-graph project.
+Plan a phase of work for the noorinalabs-isnad-graph project.
 
 ## Instructions
 1. Read the phase scope from memory/project docs
