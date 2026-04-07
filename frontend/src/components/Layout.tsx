@@ -1,11 +1,13 @@
 import { Link, Outlet } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import TrialBanner from './TrialBanner'
 import UserMenu from './UserMenu'
 import { PageHeaderAccent } from './icons/decorative'
 
 export default function Layout() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <TrialBanner />
       <header
         className="geo-border-bottom"
         style={{

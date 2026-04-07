@@ -6,6 +6,7 @@ import type {
   Collection,
   NarratorChainsResponse,
   SearchResultsResponse,
+  SubscriptionResponse,
   TimelineResponse,
   TimelineRangeResponse,
   ParallelsResponse,
@@ -190,6 +191,12 @@ export async function flagContent(
   })
   if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`)
   return res.json() as Promise<ModerationItem>
+}
+
+// --- Subscription ---
+
+export async function fetchSubscription(): Promise<SubscriptionResponse> {
+  return fetchJson(`${API_BASE}/auth/subscription`)
 }
 
 // --- Admin: Reports ---

@@ -27,6 +27,9 @@ import ConfigPage from './pages/admin/ConfigPage'
 import AuditLogPage from './pages/admin/AuditLogPage'
 import DashboardPage from './pages/admin/DashboardPage'
 import ProfilePage from './pages/ProfilePage'
+import PricingPage from './pages/PricingPage'
+import CheckoutPage from './pages/CheckoutPage'
+import TrialExpiredPage from './pages/TrialExpiredPage'
 import HomePage from './pages/HomePage'
 import NotFoundPage from './pages/NotFoundPage'
 import SessionExpiredModal from './components/SessionExpiredModal'
@@ -50,6 +53,9 @@ export default function App() {
             {/* Public routes */}
             <Route path="login" element={<LoginPage />} />
             <Route path="auth/callback/:provider" element={<AuthCallbackPage />} />
+            <Route path="pricing" element={<PricingPage />} />
+            <Route path="billing/checkout" element={<CheckoutPage />} />
+            <Route path="trial-expired" element={<TrialExpiredPage />} />
 
             {/* Authenticated routes */}
             <Route element={<ProtectedRoute />}>

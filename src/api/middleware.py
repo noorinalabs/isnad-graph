@@ -14,7 +14,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.requests import Request as StarletteRequest
 from starlette.responses import Response
 
-from src.auth.models import ROLE_HIERARCHY, Role, User
+from src.auth.models import ROLE_HIERARCHY, Role, SubscriptionStatus, User
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -305,6 +305,84 @@ class SessionTrackingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class TrialEnforcementMiddleware(BaseHTTPMiddleware):
+    """Check subscription status on authenticated requests.
+
+    If the user's trial has expired, return 403 for all endpoints except
+    auth and billing-related paths so users can still upgrade.
+    """
+
+    _EXEMPT_PREFIXES = (
+        "/api/v1/auth/",
+        "/api/v1/billing",
+        "/health",
+        "/metrics",
+        "/docs",
+        "/openapi.json",
+    )
+
+    async def dispatch(
+        self, request: StarletteRequest, call_next: RequestResponseEndpoint
+    ) -> Response:
+        path = request.url.path
+
+        if not path.startswith("/api/") or any(path.startswith(p) for p in self._EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return await call_next(request)
+
+        from src.auth.tokens import verify_token
+
+        token = auth_header.removeprefix("Bearer ")
+        try:
+            payload = verify_token(token)
+        except ValueError:
+            return await call_next(request)
+
+        user_id = payload.get("sub")
+        if not isinstance(user_id, str):
+            return await call_next(request)
+
+        try:
+            neo4j = request.app.state.neo4j
+            records = neo4j.execute_read(
+                "MATCH (u:USER {id: $uid}) RETURN u.subscription_status AS status, "
+                "u.trial_expires AS expires",
+                {"uid": user_id},
+            )
+            if records:
+                status = records[0].get("status")
+                expires = records[0].get("expires")
+
+                if status == SubscriptionStatus.TRIAL.value and expires is not None:
+                    now = datetime.now(UTC)
+                    if isinstance(expires, datetime) and now > expires:
+                        status = SubscriptionStatus.EXPIRED.value
+                        neo4j.execute_write(
+                            "MATCH (u:USER {id: $uid}) "
+                            "SET u.subscription_status = $status",
+                            {"uid": user_id, "status": status},
+                        )
+
+                if status == SubscriptionStatus.EXPIRED.value:
+                    import json
+
+                    return Response(
+                        status_code=403,
+                        content=json.dumps({
+                            "detail": "Your free trial has expired. Please upgrade to continue.",
+                            "code": "trial_expired",
+                        }),
+                        media_type="application/json",
+                    )
+        except Exception:  # noqa: BLE001
+            log.debug("trial_enforcement_check_failed", user_id=user_id)
+
+        return await call_next(request)
+
+
 def require_role(min_role: Role) -> Callable[..., object]:
     """Return a FastAPI dependency that enforces a minimum role level.
 
@@ -389,6 +467,18 @@ async def require_auth(request: Request) -> User:
         records = neo4j.execute_read("MATCH (u:USER {id: $user_id}) RETURN u", {"user_id": user_id})
         if records:
             u = records[0]["u"]
+            trial_start = None
+            trial_expires = None
+            raw_start = u.get("trial_start")
+            raw_expires = u.get("trial_expires")
+            if raw_start is not None:
+                trial_start = (
+                    raw_start if isinstance(raw_start, datetime) else datetime.now(UTC)
+                )
+            if raw_expires is not None:
+                trial_expires = (
+                    raw_expires if isinstance(raw_expires, datetime) else datetime.now(UTC)
+                )
             return User(
                 id=user_id,
                 email=u.get("email", user_id),
@@ -398,6 +488,10 @@ async def require_auth(request: Request) -> User:
                 created_at=datetime.now(UTC),
                 is_admin=u.get("is_admin", False),
                 role=u.get("role"),
+                subscription_tier=u.get("subscription_tier"),
+                subscription_status=u.get("subscription_status"),
+                trial_start=trial_start,
+                trial_expires=trial_expires,
             )
     except Exception:  # noqa: BLE001
         log.debug("neo4j_user_lookup_failed", user_id=user_id)

@@ -14,6 +14,7 @@ from src.api.middleware import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
     SessionTrackingMiddleware,
+    TrialEnforcementMiddleware,
     require_admin,
     require_auth,
 )
@@ -132,6 +133,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(SessionTrackingMiddleware)
+    app.add_middleware(TrialEnforcementMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware, max_body_size=1_048_576)
     app.add_middleware(
         RateLimitMiddleware,

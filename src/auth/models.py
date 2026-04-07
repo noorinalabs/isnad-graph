@@ -25,6 +25,27 @@ ROLE_HIERARCHY: dict[Role, int] = {
 }
 
 
+class SubscriptionTier(StrEnum):
+    """Billing subscription tiers."""
+
+    TRIAL = "trial"
+    INDIVIDUAL = "individual"
+    TEAM = "team"
+    ENTERPRISE = "enterprise"
+
+
+class SubscriptionStatus(StrEnum):
+    """Subscription lifecycle states."""
+
+    TRIAL = "trial"
+    ACTIVE = "active"
+    EXPIRED = "expired"
+    CANCELLED = "cancelled"
+
+
+TRIAL_DURATION_DAYS = 7
+
+
 class User(BaseModel):
     """Authenticated user."""
 
@@ -38,6 +59,10 @@ class User(BaseModel):
     created_at: datetime
     is_admin: bool = False
     role: str | None = None
+    subscription_tier: str | None = None
+    subscription_status: str | None = None
+    trial_start: datetime | None = None
+    trial_expires: datetime | None = None
 
 
 class TokenResponse(BaseModel):
@@ -49,6 +74,18 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class SubscriptionResponse(BaseModel):
+    """Subscription status returned by GET /auth/subscription."""
+
+    model_config = ConfigDict(frozen=True)
+
+    tier: str
+    status: str
+    days_remaining: int
+    trial_start: datetime | None = None
+    trial_expires: datetime | None = None
 
 
 class AuthorizationUrlResponse(BaseModel):
