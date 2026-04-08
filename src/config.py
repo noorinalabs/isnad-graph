@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -44,25 +43,10 @@ class RedisSettings(BaseSettings):
 
 
 class AuthSettings(BaseSettings):
-    """OAuth and JWT authentication settings."""
+    """Authentication settings for user-service JWT validation."""
 
-    jwt_secret: str = "dev-secret-change-in-production"
-    jwt_algorithm: str = "HS256"
-    access_token_expire_minutes: int = 15
-    refresh_token_expire_days: int = 30
-    google_client_id: str = ""
-    google_client_secret: str = ""
-    apple_client_id: str = ""
-    apple_client_secret: str = ""
-    facebook_client_id: str = ""
-    facebook_client_secret: str = ""
-    github_client_id: str = ""
-    github_client_secret: str = ""
-    oauth_redirect_base_url: str = "http://localhost:8000"
-    first_user_is_admin: bool = False
-    cookie_domain: str = ""
-    cookie_secure: bool = False
-    cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    user_service_url: str = "http://localhost:8001"
+    user_service_jwks_cache_ttl: int = 3600
     session_idle_timeout_minutes: int = 30
     session_idle_warning_seconds: int = 60
     max_concurrent_sessions: int = 5
@@ -89,24 +73,6 @@ class SecurityHeaderSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SECURITY_")
 
 
-class EmailSettings(BaseSettings):
-    """Email sending configuration for verification emails."""
-
-    provider: str = "smtp"
-    api_key: str = ""
-    smtp_host: str = "localhost"
-    smtp_port: int = 587
-    smtp_user: str = ""
-    smtp_password: str = ""
-    smtp_use_tls: bool = True
-    from_address: str = "noreply@noorinalabs.com"
-    from_name: str = "Noorina Labs"
-    verification_token_ttl_hours: int = 24
-    resend_rate_limit: int = 3
-
-    model_config = SettingsConfigDict(env_prefix="EMAIL_")
-
-
 class Settings(BaseSettings):
     """Root application settings, composed from nested service settings."""
 
@@ -116,7 +82,6 @@ class Settings(BaseSettings):
     rate_limit: RateLimitSettings = RateLimitSettings()
     auth: AuthSettings = AuthSettings()
     security_headers: SecurityHeaderSettings = SecurityHeaderSettings()
-    email: EmailSettings = EmailSettings()
 
     cors_origins: list[str] = ["http://localhost:3000"]
 

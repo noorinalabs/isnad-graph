@@ -124,20 +124,24 @@ class TestTokenWithMissingSub:
 
     def test_missing_sub_claim(self, client: TestClient) -> None:
         import secrets as stdlib_secrets
-        from datetime import UTC, datetime, timedelta
+        import time as time_mod
 
         from jose import jwt
 
-        from tests.test_security.conftest import _TEST_ALGORITHM, _TEST_SECRET
+        from tests.test_security.conftest import _TEST_PEM
 
+        now = int(time_mod.time())
         payload = {
             "type": "access",
-            "exp": datetime.now(UTC) + timedelta(minutes=30),
-            "iat": datetime.now(UTC),
+            "email": "test@example.com",
+            "roles": ["viewer"],
+            "subscription_status": "active",
+            "exp": now + 1800,
+            "iat": now,
             "jti": stdlib_secrets.token_hex(16),
             # No "sub" claim
         }
-        token = jwt.encode(payload, _TEST_SECRET, algorithm=_TEST_ALGORITHM)
+        token = jwt.encode(payload, _TEST_PEM, algorithm="RS256")
         response = client.get(
             "/api/v1/narrators",
             headers={"Authorization": f"Bearer {token}"},

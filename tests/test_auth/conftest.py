@@ -40,7 +40,11 @@ def test_settings(monkeypatch: pytest.MonkeyPatch) -> Settings:
         ),
         postgres=PostgresSettings(_env_file=None, dsn="postgresql://test:test@localhost:5432/test"),
         redis=RedisSettings(_env_file=None, url="redis://localhost:6379/0"),
-        auth=AuthSettings(_env_file=None, jwt_secret="test-secret", jwt_algorithm="HS256"),
+        auth=AuthSettings(
+            _env_file=None,
+            user_service_url="http://localhost:8001",
+            user_service_jwks_cache_ttl=3600,
+        ),
     )
 
 
@@ -49,8 +53,7 @@ def _patch_settings(test_settings: Settings) -> Iterator[None]:
     """Patch get_settings at every import site so all auth code uses test settings."""
     targets = [
         "src.config.get_settings",
-        "src.auth.tokens.get_settings",
-        "src.auth.providers.get_settings",
+        "src.auth.jwks.get_settings",
         "src.api.routes.auth.get_settings",
     ]
     patches = [patch(t, return_value=test_settings) for t in targets]

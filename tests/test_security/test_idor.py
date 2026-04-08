@@ -31,30 +31,6 @@ class TestIDORUserEndpoints:
         assert response.status_code == 403
 
 
-class TestIDORMeEndpoint:
-    """The /auth/me endpoint must return only the authenticated user's data."""
-
-    def test_me_returns_own_data(self, client: TestClient, valid_token: str) -> None:
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {valid_token}"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == "regular-user-001"
-
-    def test_me_does_not_leak_other_users(self, client: TestClient, admin_token: str) -> None:
-        response = client.get(
-            "/api/v1/auth/me",
-            headers={"Authorization": f"Bearer {admin_token}"},
-        )
-        assert response.status_code == 200
-        data = response.json()
-        assert data["id"] == "admin-user-001"
-        # Must not contain other users' data
-        assert "regular-user-001" not in response.text
-
-
 class TestIDEnumeration:
     """Sequential/predictable ID enumeration attempts."""
 

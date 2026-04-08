@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import time
 import uuid
-from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
+import httpx
 import structlog
 from fastapi import Request
 from fastapi.exceptions import HTTPException
@@ -306,10 +306,11 @@ class SessionTrackingMiddleware(BaseHTTPMiddleware):
 
 
 class TrialEnforcementMiddleware(BaseHTTPMiddleware):
-    """Check subscription status on authenticated requests.
+    """Check subscription status from JWT claims on authenticated requests.
 
-    If the user's trial has expired, return 403 for all endpoints except
-    auth and billing-related paths so users can still upgrade.
+    If the user's subscription_status claim is "expired", return 403 for all
+    endpoints except auth and billing-related paths so users can still upgrade.
+    Subscription state is owned by user-service — no Neo4j queries needed.
     """
 
     _EXEMPT_PREFIXES = (
@@ -333,63 +334,61 @@ class TrialEnforcementMiddleware(BaseHTTPMiddleware):
         if not auth_header.startswith("Bearer "):
             return await call_next(request)
 
-        from src.auth.tokens import verify_token
+        from src.auth.jwks import verify_user_service_token
 
         token = auth_header.removeprefix("Bearer ")
         try:
-            payload = verify_token(token)
-        except ValueError:
+            payload = verify_user_service_token(token)
+        except (ValueError, httpx.HTTPError):
             return await call_next(request)
 
-        user_id = payload.get("sub")
-        if not isinstance(user_id, str):
-            return await call_next(request)
+        status = payload.get("subscription_status")
+        if status == SubscriptionStatus.EXPIRED.value:
+            import json
 
-        try:
-            neo4j = request.app.state.neo4j
-            records = neo4j.execute_read(
-                "MATCH (u:USER {id: $uid}) RETURN u.subscription_status AS status, "
-                "u.trial_expires AS expires",
-                {"uid": user_id},
+            return Response(
+                status_code=403,
+                content=json.dumps(
+                    {
+                        "detail": "Your free trial has expired. Please upgrade to continue.",
+                        "code": "trial_expired",
+                    }
+                ),
+                media_type="application/json",
             )
-            if records:
-                status = records[0].get("status")
-                expires = records[0].get("expires")
-
-                if status == SubscriptionStatus.TRIAL.value and expires is not None:
-                    now = datetime.now(UTC)
-                    if isinstance(expires, datetime) and now > expires:
-                        status = SubscriptionStatus.EXPIRED.value
-                        neo4j.execute_write(
-                            "MATCH (u:USER {id: $uid}) SET u.subscription_status = $status",
-                            {"uid": user_id, "status": status},
-                        )
-
-                if status == SubscriptionStatus.EXPIRED.value:
-                    import json
-
-                    return Response(
-                        status_code=403,
-                        content=json.dumps(
-                            {
-                                "detail": "Your free trial has expired."
-                                " Please upgrade to continue.",
-                                "code": "trial_expired",
-                            }
-                        ),
-                        media_type="application/json",
-                    )
-        except Exception:  # noqa: BLE001
-            log.debug("trial_enforcement_check_failed", user_id=user_id)
 
         return await call_next(request)
+
+
+_USER_SERVICE_ROLE_MAP: dict[str, Role] = {
+    "admin": Role.ADMIN,
+    "moderator": Role.MODERATOR,
+    "researcher": Role.EDITOR,
+    "editor": Role.EDITOR,
+    "reader": Role.VIEWER,
+    "viewer": Role.VIEWER,
+    "trial": Role.VIEWER,
+}
+
+
+def _resolve_role(roles: list[str]) -> Role:
+    """Pick the highest-privilege role from the JWT ``roles`` claim."""
+    best = Role.VIEWER
+    best_level = 0
+    for r in roles:
+        mapped = _USER_SERVICE_ROLE_MAP.get(r.lower(), Role.VIEWER)
+        level = ROLE_HIERARCHY.get(mapped, 0)
+        if level > best_level:
+            best = mapped
+            best_level = level
+    return best
 
 
 def require_role(min_role: Role) -> Callable[..., object]:
     """Return a FastAPI dependency that enforces a minimum role level.
 
-    The user's role is resolved from the DB record (via ``require_auth``).
-    Users without a role default to ``Role.VIEWER``.
+    The user's role is resolved from the JWT ``roles`` claim issued by
+    user-service.
     """
 
     async def dependency(request: Request) -> User:
@@ -406,41 +405,24 @@ def require_role(min_role: Role) -> Callable[..., object]:
 
 
 async def require_admin(request: Request) -> User:
-    """Require authenticated user with admin role. Return 403 if not admin.
-
-    Delegates to ``require_role(Role.ADMIN)`` for role-based checks, and also
-    honours the legacy ``is_admin`` boolean for backward compatibility.
-    """
+    """Require authenticated user with admin role. Return 403 if not admin."""
     user = await require_auth(request)
-
-    # Validate role string against known Role enum values (#483)
-    if user.role is not None:
-        role_values = {r.value for r in Role}
-        if user.role not in role_values:
-            log.warning(
-                "unknown_role_string",
-                user_id=user.id,
-                role=user.role,
-                msg="User has role string not in Role enum; defaulting to viewer-level access",
-            )
-
-    # Accept either legacy is_admin flag or role-based admin
     user_role = Role(user.role) if user.role in {r.value for r in Role} else Role.VIEWER
     is_role_admin = ROLE_HIERARCHY.get(user_role, 0) >= ROLE_HIERARCHY[Role.ADMIN]
 
-    if not user.is_admin and not is_role_admin:
+    if not is_role_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
 
 async def require_auth(request: Request) -> User:
-    """FastAPI dependency that requires a valid Bearer token.
+    """FastAPI dependency that validates a user-service RS256 JWT.
 
-    Extracts the JWT from the Authorization header, verifies it, and returns
-    a User object. When possible, looks up the real user record from Neo4j
-    so that email/name are not placeholder values (#482).
+    Extracts the Bearer token, verifies it against the user-service JWKS,
+    and builds a User object from the JWT claims (no Neo4j query).
 
-    Raises 401 if the token is missing or invalid.
+    Returns 401 for invalid/expired tokens.
+    Returns 503 when the user-service JWKS endpoint is unreachable.
     """
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
@@ -448,12 +430,16 @@ async def require_auth(request: Request) -> User:
 
     token = auth_header.removeprefix("Bearer ")
 
-    from src.auth.tokens import verify_token
+    from src.auth.jwks import verify_user_service_token
 
     try:
-        payload = verify_token(token)
+        payload = verify_user_service_token(token)
     except ValueError:
         raise HTTPException(status_code=401, detail="Invalid or expired token")  # noqa: B904
+    except httpx.HTTPError:
+        raise HTTPException(  # noqa: B904
+            status_code=503, detail="Authentication service unavailable"
+        )
 
     token_type = payload.get("type")
     if token_type != "access":
@@ -463,111 +449,18 @@ async def require_auth(request: Request) -> User:
     if not isinstance(user_id, str):
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    # Attempt to look up the real user record from Neo4j (#482)
-    try:
-        neo4j = request.app.state.neo4j
-        records = neo4j.execute_read("MATCH (u:USER {id: $user_id}) RETURN u", {"user_id": user_id})
-        if records:
-            u = records[0]["u"]
-            trial_start = None
-            trial_expires = None
-            raw_start = u.get("trial_start")
-            raw_expires = u.get("trial_expires")
-            if raw_start is not None:
-                trial_start = raw_start if isinstance(raw_start, datetime) else datetime.now(UTC)
-            if raw_expires is not None:
-                trial_expires = (
-                    raw_expires if isinstance(raw_expires, datetime) else datetime.now(UTC)
-                )
-            return User(
-                id=user_id,
-                email=u.get("email", user_id),
-                name=u.get("name", user_id),
-                provider=u.get("provider", "jwt"),
-                provider_user_id=user_id,
-                created_at=datetime.now(UTC),
-                is_admin=u.get("is_admin", False),
-                role=u.get("role"),
-                email_verified=u.get("email_verified", False),
-                subscription_tier=u.get("subscription_tier"),
-                subscription_status=u.get("subscription_status"),
-                trial_start=trial_start,
-                trial_expires=trial_expires,
-            )
-    except Exception:  # noqa: BLE001
-        log.debug("neo4j_user_lookup_failed", user_id=user_id)
+    # Extract claims from user-service JWT
+    email = payload.get("email")
+    roles_claim = payload.get("roles")
+    roles_list: list[str] = roles_claim if isinstance(roles_claim, list) else []
+    resolved_role = _resolve_role(roles_list)
+    subscription_status = payload.get("subscription_status")
 
-    # Fall back to JWT claims when Neo4j is unavailable
-    token_role = payload.get("role")
     return User(
         id=user_id,
-        email=user_id,
-        name=user_id,
-        provider="jwt",
-        provider_user_id=user_id,
-        created_at=datetime.now(UTC),
-        role=token_role if isinstance(token_role, str) else None,
+        email=email if isinstance(email, str) else user_id,
+        name=email if isinstance(email, str) else user_id,
+        role=resolved_role.value,
+        is_admin=resolved_role == Role.ADMIN,
+        subscription_status=(subscription_status if isinstance(subscription_status, str) else None),
     )
-
-
-class EmailVerificationMiddleware(BaseHTTPMiddleware):
-    """Block unverified users from protected API routes.
-
-    Returns 403 with ``EMAIL_NOT_VERIFIED`` code for any authenticated but
-    unverified user accessing ``/api/*`` routes, except for auth, verification,
-    health, and documentation paths.
-    """
-
-    _EXEMPT_PREFIXES = (
-        "/api/v1/auth/",
-        "/verify",
-        "/health",
-        "/metrics",
-        "/docs",
-        "/openapi.json",
-    )
-
-    async def dispatch(
-        self, request: StarletteRequest, call_next: RequestResponseEndpoint
-    ) -> Response:
-        path = request.url.path
-
-        if not path.startswith("/api/") or any(path.startswith(p) for p in self._EXEMPT_PREFIXES):
-            return await call_next(request)
-
-        auth_header = request.headers.get("Authorization", "")
-        if not auth_header.startswith("Bearer "):
-            return await call_next(request)
-
-        token = auth_header.removeprefix("Bearer ")
-        from src.auth.tokens import verify_token
-
-        try:
-            payload = verify_token(token)
-        except ValueError:
-            return await call_next(request)
-
-        user_id = payload.get("sub")
-        if not isinstance(user_id, str):
-            return await call_next(request)
-
-        try:
-            neo4j = request.app.state.neo4j
-            records = neo4j.execute_read(
-                "MATCH (u:USER {id: $uid}) RETURN u.email_verified AS verified",
-                {"uid": user_id},
-            )
-            if records and not records[0].get("verified", False):
-                from starlette.responses import JSONResponse
-
-                return JSONResponse(
-                    status_code=403,
-                    content={
-                        "detail": "Email not verified",
-                        "code": "EMAIL_NOT_VERIFIED",
-                    },
-                )
-        except Exception:  # noqa: BLE001
-            pass
-
-        return await call_next(request)

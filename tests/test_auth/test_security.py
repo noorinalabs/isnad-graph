@@ -47,8 +47,6 @@ def mock_neo4j() -> MagicMock:
 @pytest.fixture
 def app(mock_neo4j: MagicMock):  # noqa: ANN201
     """FastAPI app with mocked Neo4j (lifespan disabled)."""
-    from datetime import UTC, datetime
-
     from fastapi import FastAPI
 
     from src.api.app import create_app
@@ -61,9 +59,6 @@ def app(mock_neo4j: MagicMock):  # noqa: ANN201
         id="test-user",
         email="test@example.com",
         name="Test User",
-        provider="jwt",
-        provider_user_id="test-user",
-        created_at=datetime.now(UTC),
     )
     return app
 
@@ -308,28 +303,6 @@ class TestInputValidation:
     def test_graph_network_limit_too_high(self, client: TestClient) -> None:
         resp = client.get("/api/v1/graph/narrator/test/network?limit=999")
         assert resp.status_code == 422
-
-
-# --- 2FA Stub Endpoints ---
-
-
-class TestTwoFAStubs:
-    """Verify 2FA endpoints return 501 Not Implemented."""
-
-    def test_enroll_returns_501(self, client: TestClient) -> None:
-        resp = client.post("/api/v1/auth/2fa/enroll")
-        assert resp.status_code == 501
-        assert "not yet implemented" in resp.json()["detail"].lower()
-
-    def test_verify_returns_501(self, client: TestClient) -> None:
-        resp = client.post("/api/v1/auth/2fa/verify")
-        assert resp.status_code == 501
-        assert "not yet implemented" in resp.json()["detail"].lower()
-
-    def test_recovery_returns_501(self, client: TestClient) -> None:
-        resp = client.post("/api/v1/auth/2fa/recovery")
-        assert resp.status_code == 501
-        assert "not yet implemented" in resp.json()["detail"].lower()
 
 
 # --- ID Sanitization ---

@@ -9,7 +9,6 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.middleware import (
-    EmailVerificationMiddleware,
     RateLimitMiddleware,
     RequestLoggingMiddleware,
     RequestSizeLimitMiddleware,
@@ -133,7 +132,7 @@ def create_app() -> FastAPI:
         openapi_tags=OPENAPI_TAGS,
     )
     app.add_middleware(SecurityHeadersMiddleware)
-    app.add_middleware(EmailVerificationMiddleware)
+    # EmailVerificationMiddleware removed — user-service owns email verification
     app.add_middleware(SessionTrackingMiddleware)
     app.add_middleware(TrialEnforcementMiddleware)
     app.add_middleware(RequestSizeLimitMiddleware, max_body_size=1_048_576)
@@ -229,9 +228,7 @@ def create_app() -> FastAPI:
         dependencies=[Depends(require_admin)],
     )
 
-    from src.auth.twofa import router as twofa_router
-
-    app.include_router(twofa_router, tags=["2fa"])
+    # 2FA router removed — handled by user-service
 
     from prometheus_fastapi_instrumentator import Instrumentator
 

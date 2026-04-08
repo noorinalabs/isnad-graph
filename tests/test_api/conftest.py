@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
 from unittest.mock import MagicMock
 
 import pytest
@@ -18,9 +17,6 @@ def _fake_user() -> User:
         id="test-user",
         email="test@example.com",
         name="Test User",
-        provider="jwt",
-        provider_user_id="test-user",
-        created_at=datetime.now(UTC),
     )
 
 
