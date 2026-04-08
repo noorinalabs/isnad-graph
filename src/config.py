@@ -63,6 +63,9 @@ class AuthSettings(BaseSettings):
     cookie_domain: str = ""
     cookie_secure: bool = False
     cookie_samesite: Literal["lax", "strict", "none"] = "lax"
+    session_idle_timeout_minutes: int = 30
+    session_idle_warning_seconds: int = 60
+    max_concurrent_sessions: int = 5
 
     model_config = SettingsConfigDict(env_prefix="AUTH_")
 

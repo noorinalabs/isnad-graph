@@ -239,6 +239,72 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class SessionTrackingMiddleware(BaseHTTPMiddleware):
+    """Validate server-side sessions and enforce idle timeout.
+
+    On each authenticated request, checks that the session is still active
+    and refreshes its last_active timestamp. Returns 401 with an
+    ``X-Session-Idle-Timeout`` header if the session has expired, and
+    includes ``X-Session-Warning-Seconds`` when the session is approaching
+    its idle timeout so the frontend can display a warning.
+    """
+
+    _EXEMPT_PREFIXES = (
+        "/api/v1/auth/",
+        "/health",
+        "/metrics",
+        "/docs",
+        "/openapi.json",
+    )
+
+    async def dispatch(
+        self, request: StarletteRequest, call_next: RequestResponseEndpoint
+    ) -> Response:
+        path = request.url.path
+
+        if not path.startswith("/api/") or any(path.startswith(p) for p in self._EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        session_id = request.headers.get("X-Session-ID")
+        if not session_id:
+            return await call_next(request)
+
+        from src.auth.sessions import get_idle_timeout_warning_seconds, get_session, touch_session
+
+        session = get_session(session_id)
+        if session is None:
+            import json
+
+            return Response(
+                status_code=401,
+                content=json.dumps(
+                    {
+                        "detail": "Session has expired due to inactivity.",
+                        "code": "session_idle_timeout",
+                    }
+                ),
+                media_type="application/json",
+                headers={"X-Session-Idle-Timeout": "true"},
+            )
+
+        touch_session(session_id)
+
+        response = await call_next(request)
+
+        # Add warning header if session is approaching idle timeout
+        from src.config import get_settings
+
+        settings = get_settings().auth
+        idle_timeout = settings.session_idle_timeout_minutes * 60
+        elapsed = time.time() - session.last_active
+        remaining = idle_timeout - elapsed
+        warning_threshold = get_idle_timeout_warning_seconds()
+        if remaining <= warning_threshold:
+            response.headers["X-Session-Warning-Seconds"] = str(int(remaining))
+
+        return response
+
+
 def require_role(min_role: Role) -> Callable[..., object]:
     """Return a FastAPI dependency that enforces a minimum role level.
 

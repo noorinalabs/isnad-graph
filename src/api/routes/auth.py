@@ -8,15 +8,29 @@ from urllib.parse import urlencode
 import structlog
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel, ConfigDict
 
 from src.api.middleware import require_auth
-from src.auth.models import AuthorizationUrlResponse, Role, TokenResponse, User
+from src.auth.models import (
+    AuthorizationUrlResponse,
+    Role,
+    TokenResponse,
+    User,
+)
 from src.auth.providers import (
     PROVIDERS,
     OAuthUserInfo,
     get_provider,
     retrieve_pkce_verifier,
     store_pkce_verifier,
+)
+from src.auth.sessions import (
+    create_session,
+    destroy_all_user_sessions,
+    destroy_session,
+    get_idle_timeout_warning_seconds,
+    list_user_sessions,
+    touch_session,
 )
 from src.auth.tokens import (
     create_access_token,
@@ -256,11 +270,17 @@ async def callback(provider: str, code: str, state: str, request: Request) -> Re
     refresh_token = create_refresh_token(user_id)
     csrf_token = secrets.token_hex(_CSRF_TOKEN_BYTES)
 
+    # Create a server-side session for tracking
+    ip_address = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("User-Agent", "unknown")
+    session_id = create_session(user_id, ip_address, user_agent, role=user_role)
+
     # Redirect to frontend callback page with access token in URL
     # Refresh token goes in httpOnly cookie — never exposed to JS
     params = urlencode(
         {
             "token": access_token,
+            "session_id": session_id,
             "is_new_user": "1" if is_new_user else "0",
         }
     )
@@ -348,10 +368,11 @@ def refresh(request: Request, response: Response) -> TokenResponse:
 
 
 @router.post("/auth/logout", status_code=204)
-def logout(response: Response, user: User = Depends(require_auth)) -> None:
-    """Invalidate the current session (revoke tokens, clear cookies)."""
-    # Revoke the refresh token from the cookie if present
-    # (The access token is short-lived and will expire naturally.)
+def logout(request: Request, response: Response, user: User = Depends(require_auth)) -> None:
+    """Invalidate the current session (revoke tokens, clear cookies, destroy session)."""
+    session_id = request.headers.get("X-Session-ID")
+    if session_id:
+        destroy_session(session_id)
     _clear_auth_cookies(response)
     return None
 
@@ -360,8 +381,9 @@ def logout(response: Response, user: User = Depends(require_auth)) -> None:
 def logout_all(response: Response, user: User = Depends(require_auth)) -> None:
     """Invalidate all sessions for the current user across all devices."""
     revoke_all_user_tokens(user.id)
+    count = destroy_all_user_sessions(user.id)
     _clear_auth_cookies(response)
-    log.info("logout_all_devices", user_id=user.id)
+    log.info("logout_all_devices", user_id=user.id, sessions_destroyed=count)
     return None
 
 
@@ -369,3 +391,78 @@ def logout_all(response: Response, user: User = Depends(require_auth)) -> None:
 def me(user: User = Depends(require_auth)) -> User:
     """Return the current authenticated user."""
     return user
+
+
+# --- Session management endpoints ---
+
+
+class SessionResponse(BaseModel):
+    """Response model for a single session."""
+
+    model_config = ConfigDict(frozen=True)
+
+    session_id: str
+    ip_address: str
+    user_agent: str
+    created_at: float
+    last_active: float
+
+
+class SessionListResponse(BaseModel):
+    """Response model for listing active sessions."""
+
+    model_config = ConfigDict(frozen=True)
+
+    sessions: list[SessionResponse]
+    idle_timeout_minutes: int
+    warning_seconds: int
+
+
+@router.get("/auth/sessions", response_model=SessionListResponse)
+def list_sessions(user: User = Depends(require_auth)) -> SessionListResponse:
+    """List all active sessions for the current user."""
+    sessions = list_user_sessions(user.id)
+    settings = get_settings().auth
+    return SessionListResponse(
+        sessions=[
+            SessionResponse(
+                session_id=s.session_id,
+                ip_address=s.ip_address,
+                user_agent=s.user_agent,
+                created_at=s.created_at,
+                last_active=s.last_active,
+            )
+            for s in sessions
+        ],
+        idle_timeout_minutes=settings.session_idle_timeout_minutes,
+        warning_seconds=get_idle_timeout_warning_seconds(),
+    )
+
+
+@router.delete("/auth/sessions/{session_id}", status_code=204)
+def revoke_session(session_id: str, user: User = Depends(require_auth)) -> None:
+    """Revoke a specific session. Users can only revoke their own sessions."""
+    from src.auth.sessions import get_session as get_sess
+
+    session = get_sess(session_id)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id != user.id:
+        raise HTTPException(status_code=403, detail="Cannot revoke another user's session")
+    destroy_session(session_id)
+    log.info("session_revoked", user_id=user.id, session_id=session_id)
+
+
+@router.post("/auth/sessions/heartbeat", status_code=204)
+def session_heartbeat(request: Request, user: User = Depends(require_auth)) -> None:
+    """Keep the current session alive (reset idle timer)."""
+    session_id = request.headers.get("X-Session-ID")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing X-Session-ID header")
+    alive = touch_session(session_id)
+    if not alive:
+        raise HTTPException(
+            status_code=401,
+            detail="Session has expired",
+            headers={"X-Session-Idle-Timeout": "true"},
+        )
