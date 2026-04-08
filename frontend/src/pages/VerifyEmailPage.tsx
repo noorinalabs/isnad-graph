@@ -44,7 +44,7 @@ export default function VerifyEmailPage() {
 
     const newCode = [...code]
     for (let i = 0; i < pasted.length; i++) {
-      newCode[i] = pasted[i]
+      newCode[i] = pasted[i] ?? ''
     }
     setCode(newCode)
 
