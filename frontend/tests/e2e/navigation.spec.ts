@@ -13,6 +13,15 @@ async function mockAuthAndData(page: Page) {
     route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(authUser) }),
   )
 
+  // Mock subscription — return active trial so ProtectedRoute renders the app
+  await page.route('**/api/v1/auth/subscription', (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ status: 'trial', tier: 'trial', days_remaining: 7 }),
+    }),
+  )
+
   // Catch-all for API requests to prevent hangs
   await page.route('**/api/v1/**', (route) => {
     const url = route.request().url()

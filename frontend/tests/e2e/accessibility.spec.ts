@@ -26,6 +26,14 @@ test.describe('Accessibility', () => {
     await page.route('**/api/v1/auth/me', (route) =>
       route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(authUser) }),
     )
+    // Mock subscription — return active trial so ProtectedRoute renders the app
+    await page.route('**/api/v1/auth/subscription', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ status: 'trial', tier: 'trial', days_remaining: 7 }),
+      }),
+    )
     await page.addInitScript(() => {
       localStorage.setItem('access_token', 'mock-token')
     })

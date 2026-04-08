@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useSubscription } from '../hooks/useSubscription'
 import { useTheme } from '../hooks/useTheme'
 
 function providerLabel(provider: string): string {
@@ -16,6 +17,7 @@ function providerLabel(provider: string): string {
 
 export default function UserMenu() {
   const { user, logout, signOutAll, role } = useAuth()
+  const { isTrial, daysRemaining, subscription } = useSubscription()
   const { resolvedTheme, toggle } = useTheme()
   const [open, setOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -141,6 +143,43 @@ export default function UserMenu() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
             Preferences
           </button>
+
+          {/* Subscription info */}
+          {subscription && (
+            <div
+              style={{
+                padding: 'var(--spacing-3) var(--spacing-4)',
+                borderBottom: 'var(--border-width-thin) solid var(--color-border)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-muted-foreground)' }}>
+                {isTrial ? (
+                  <span>
+                    Trial: <strong style={{ color: daysRemaining <= 2 ? 'var(--color-destructive)' : 'var(--color-foreground)' }}>
+                      {daysRemaining} day{daysRemaining !== 1 ? 's' : ''} left
+                    </strong>
+                  </span>
+                ) : (
+                  <span style={{ textTransform: 'capitalize' }}>{subscription.tier} plan</span>
+                )}
+              </div>
+              <Link
+                to="/pricing"
+                onClick={() => setOpen(false)}
+                style={{
+                  fontSize: 'var(--text-xs)',
+                  fontWeight: 600,
+                  color: 'var(--color-primary)',
+                  textDecoration: 'none',
+                }}
+              >
+                {isTrial ? 'Upgrade' : 'Plans'}
+              </Link>
+            </div>
+          )}
 
           {/* Theme toggle */}
           <button

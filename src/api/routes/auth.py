@@ -12,8 +12,12 @@ from pydantic import BaseModel, ConfigDict
 
 from src.api.middleware import require_auth
 from src.auth.models import (
+    TRIAL_DURATION_DAYS,
     AuthorizationUrlResponse,
     Role,
+    SubscriptionResponse,
+    SubscriptionStatus,
+    SubscriptionTier,
     TokenResponse,
     User,
 )
@@ -187,6 +191,10 @@ def _upsert_user(request: Request, user_id: str, user_info: OAuthUserInfo) -> tu
             u.is_admin = $is_admin,
             u.is_suspended = false,
             u.role = $default_role,
+            u.subscription_tier = $sub_tier,
+            u.subscription_status = $sub_status,
+            u.trial_start = datetime(),
+            u.trial_expires = datetime() + duration({days: $trial_days}),
             u._created = true
         ON MATCH SET
             u.email = $email,
@@ -203,6 +211,9 @@ def _upsert_user(request: Request, user_id: str, user_info: OAuthUserInfo) -> tu
             "provider": user_info.provider,
             "is_admin": make_admin,
             "default_role": default_role.value,
+            "sub_tier": SubscriptionTier.TRIAL.value,
+            "sub_status": SubscriptionStatus.TRIAL.value,
+            "trial_days": TRIAL_DURATION_DAYS,
         },
     )
 
@@ -391,6 +402,45 @@ def logout_all(response: Response, user: User = Depends(require_auth)) -> None:
 def me(user: User = Depends(require_auth)) -> User:
     """Return the current authenticated user."""
     return user
+
+
+@router.get("/auth/subscription", response_model=SubscriptionResponse)
+def subscription(request: Request, user: User = Depends(require_auth)) -> SubscriptionResponse:
+    """Return the current user's subscription tier, status, and days remaining."""
+    from datetime import UTC, datetime
+
+    tier = user.subscription_tier or SubscriptionTier.TRIAL.value
+    status = user.subscription_status or SubscriptionStatus.TRIAL.value
+
+    # Check if trial has expired and update status accordingly
+    days_remaining = 0
+    trial_expires = user.trial_expires
+    if trial_expires is not None:
+        now = datetime.now(UTC)
+        remaining = trial_expires - now
+        days_remaining = max(0, remaining.days)
+        if days_remaining == 0 and status == SubscriptionStatus.TRIAL.value:
+            status = SubscriptionStatus.EXPIRED.value
+            try:
+                neo4j = request.app.state.neo4j
+                neo4j.execute_write(
+                    "MATCH (u:USER {id: $uid}) SET u.subscription_status = $status",
+                    {"uid": user.id, "status": SubscriptionStatus.EXPIRED.value},
+                )
+            except Exception:  # noqa: BLE001
+                log.debug("neo4j_subscription_update_failed", user_id=user.id)
+
+    # Active paid subscriptions have unlimited days
+    if status == SubscriptionStatus.ACTIVE.value:
+        days_remaining = -1
+
+    return SubscriptionResponse(
+        tier=tier,
+        status=status,
+        days_remaining=days_remaining,
+        trial_start=user.trial_start,
+        trial_expires=trial_expires,
+    )
 
 
 # --- Session management endpoints ---

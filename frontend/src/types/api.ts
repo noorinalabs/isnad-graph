@@ -182,6 +182,19 @@ export interface NarratorNetworkResponse {
   students: number
 }
 
+// --- Subscription types ---
+
+export type SubscriptionTier = 'trial' | 'individual' | 'team' | 'enterprise'
+export type SubscriptionStatus = 'trial' | 'active' | 'expired' | 'cancelled'
+
+export interface SubscriptionResponse {
+  tier: SubscriptionTier
+  status: SubscriptionStatus
+  days_remaining: number
+  trial_start: string | null
+  trial_expires: string | null
+}
+
 // --- Moderation types ---
 
 export interface ModerationItem {
