@@ -3,5 +3,6 @@
   "email": "test@example.com",
   "name": "Test User",
   "is_admin": false,
-  "provider": "email"
+  "provider": "email",
+  "email_verified": true
 }
