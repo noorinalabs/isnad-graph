@@ -59,6 +59,7 @@ class User(BaseModel):
     created_at: datetime
     is_admin: bool = False
     role: str | None = None
+    email_verified: bool = False
     subscription_tier: str | None = None
     subscription_status: str | None = None
     trial_start: datetime | None = None
@@ -74,6 +75,24 @@ class TokenResponse(BaseModel):
     refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+
+
+class VerifyEmailRequest(BaseModel):
+    """Request body for POST /auth/verify-email."""
+
+    model_config = ConfigDict(frozen=True)
+
+    token: str
+    code: str
+
+
+class VerifyEmailResponse(BaseModel):
+    """Response body for POST /auth/verify-email."""
+
+    model_config = ConfigDict(frozen=True)
+
+    verified: bool
+    message: str
 
 
 class SubscriptionResponse(BaseModel):

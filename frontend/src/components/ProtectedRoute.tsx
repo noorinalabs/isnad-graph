@@ -23,5 +23,9 @@ export default function ProtectedRoute() {
     return <Navigate to="/trial-expired" replace />
   }
 
+  if (!user.email_verified) {
+    return <Navigate to="/check-email" replace />
+  }
+
   return <Outlet />
 }

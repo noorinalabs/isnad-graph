@@ -89,6 +89,24 @@ class SecurityHeaderSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SECURITY_")
 
 
+class EmailSettings(BaseSettings):
+    """Email sending configuration for verification emails."""
+
+    provider: str = "smtp"
+    api_key: str = ""
+    smtp_host: str = "localhost"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    smtp_use_tls: bool = True
+    from_address: str = "noreply@noorinalabs.com"
+    from_name: str = "Noorina Labs"
+    verification_token_ttl_hours: int = 24
+    resend_rate_limit: int = 3
+
+    model_config = SettingsConfigDict(env_prefix="EMAIL_")
+
+
 class Settings(BaseSettings):
     """Root application settings, composed from nested service settings."""
 
@@ -98,6 +116,7 @@ class Settings(BaseSettings):
     rate_limit: RateLimitSettings = RateLimitSettings()
     auth: AuthSettings = AuthSettings()
     security_headers: SecurityHeaderSettings = SecurityHeaderSettings()
+    email: EmailSettings = EmailSettings()
 
     cors_origins: list[str] = ["http://localhost:3000"]
 
