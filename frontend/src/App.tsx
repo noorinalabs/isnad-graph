@@ -30,6 +30,8 @@ import ProfilePage from './pages/ProfilePage'
 import PricingPage from './pages/PricingPage'
 import CheckoutPage from './pages/CheckoutPage'
 import TrialExpiredPage from './pages/TrialExpiredPage'
+import CheckEmailPage from './pages/CheckEmailPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import HomePage from './pages/HomePage'
 import NotFoundPage from './pages/NotFoundPage'
 import SessionExpiredModal from './components/SessionExpiredModal'
@@ -56,6 +58,8 @@ export default function App() {
             <Route path="pricing" element={<PricingPage />} />
             <Route path="billing/checkout" element={<CheckoutPage />} />
             <Route path="trial-expired" element={<TrialExpiredPage />} />
+            <Route path="check-email" element={<CheckEmailPage />} />
+            <Route path="verify" element={<VerifyEmailPage />} />
 
             {/* Authenticated routes */}
             <Route element={<ProtectedRoute />}>

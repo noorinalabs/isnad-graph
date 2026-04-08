@@ -19,6 +19,7 @@ export default function AuthCallbackPage() {
     const errorCode = searchParams.get('error')
     const token = searchParams.get('token')
     const isNewUser = searchParams.get('is_new_user')
+    const needsVerification = searchParams.get('needs_verification')
     const returnUrl = sessionStorage.getItem('oauth_return_url') || '/'
 
     if (errorCode) {
@@ -39,6 +40,13 @@ export default function AuthCallbackPage() {
     // No need to store it in localStorage.
 
     sessionStorage.removeItem('oauth_return_url')
+
+    // Redirect to email verification for new users
+    if (needsVerification === '1') {
+      navigate('/check-email', { replace: true })
+      return
+    }
+
     navigate(returnUrl, { replace: true })
   }, [searchParams, navigate])
 

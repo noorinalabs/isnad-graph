@@ -488,6 +488,7 @@ async def require_auth(request: Request) -> User:
                 created_at=datetime.now(UTC),
                 is_admin=u.get("is_admin", False),
                 role=u.get("role"),
+                email_verified=u.get("email_verified", False),
                 subscription_tier=u.get("subscription_tier"),
                 subscription_status=u.get("subscription_status"),
                 trial_start=trial_start,
@@ -507,3 +508,66 @@ async def require_auth(request: Request) -> User:
         created_at=datetime.now(UTC),
         role=token_role if isinstance(token_role, str) else None,
     )
+
+
+class EmailVerificationMiddleware(BaseHTTPMiddleware):
+    """Block unverified users from protected API routes.
+
+    Returns 403 with ``EMAIL_NOT_VERIFIED`` code for any authenticated but
+    unverified user accessing ``/api/*`` routes, except for auth, verification,
+    health, and documentation paths.
+    """
+
+    _EXEMPT_PREFIXES = (
+        "/api/v1/auth/",
+        "/verify",
+        "/health",
+        "/metrics",
+        "/docs",
+        "/openapi.json",
+    )
+
+    async def dispatch(
+        self, request: StarletteRequest, call_next: RequestResponseEndpoint
+    ) -> Response:
+        path = request.url.path
+
+        if not path.startswith("/api/") or any(path.startswith(p) for p in self._EXEMPT_PREFIXES):
+            return await call_next(request)
+
+        auth_header = request.headers.get("Authorization", "")
+        if not auth_header.startswith("Bearer "):
+            return await call_next(request)
+
+        token = auth_header.removeprefix("Bearer ")
+        from src.auth.tokens import verify_token
+
+        try:
+            payload = verify_token(token)
+        except ValueError:
+            return await call_next(request)
+
+        user_id = payload.get("sub")
+        if not isinstance(user_id, str):
+            return await call_next(request)
+
+        try:
+            neo4j = request.app.state.neo4j
+            records = neo4j.execute_read(
+                "MATCH (u:USER {id: $uid}) RETURN u.email_verified AS verified",
+                {"uid": user_id},
+            )
+            if records and not records[0].get("verified", False):
+                from starlette.responses import JSONResponse
+
+                return JSONResponse(
+                    status_code=403,
+                    content={
+                        "detail": "Email not verified",
+                        "code": "EMAIL_NOT_VERIFIED",
+                    },
+                )
+        except Exception:  # noqa: BLE001
+            pass
+
+        return await call_next(request)

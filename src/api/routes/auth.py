@@ -20,6 +20,8 @@ from src.auth.models import (
     SubscriptionTier,
     TokenResponse,
     User,
+    VerifyEmailRequest,
+    VerifyEmailResponse,
 )
 from src.auth.providers import (
     PROVIDERS,
@@ -42,6 +44,12 @@ from src.auth.tokens import (
     revoke_all_user_tokens,
     revoke_token,
     verify_token,
+)
+from src.auth.verification import (
+    check_resend_rate_limit,
+    generate_and_store_verification,
+    send_verification_email,
+    validate_verification,
 )
 from src.config import get_settings
 
@@ -191,6 +199,7 @@ def _upsert_user(request: Request, user_id: str, user_info: OAuthUserInfo) -> tu
             u.is_admin = $is_admin,
             u.is_suspended = false,
             u.role = $default_role,
+            u.email_verified = false,
             u.subscription_tier = $sub_tier,
             u.subscription_status = $sub_status,
             u.trial_start = datetime(),
@@ -286,6 +295,17 @@ async def callback(provider: str, code: str, state: str, request: Request) -> Re
     user_agent = request.headers.get("User-Agent", "unknown")
     session_id = create_session(user_id, ip_address, user_agent, role=user_role)
 
+    # Send verification email for new users
+    needs_verification = False
+    if is_new_user:
+        try:
+            code, verify_token_ = generate_and_store_verification(user_id)
+            send_verification_email(user_info.email, user_info.name, code, verify_token_)
+            needs_verification = True
+        except Exception:  # noqa: BLE001
+            log.warning("verification_email_send_failed", user_id=user_id)
+            needs_verification = True  # Still redirect to check-email
+
     # Redirect to frontend callback page with access token in URL
     # Refresh token goes in httpOnly cookie — never exposed to JS
     params = urlencode(
@@ -293,6 +313,7 @@ async def callback(provider: str, code: str, state: str, request: Request) -> Re
             "token": access_token,
             "session_id": session_id,
             "is_new_user": "1" if is_new_user else "0",
+            "needs_verification": "1" if needs_verification else "0",
         }
     )
     response = RedirectResponse(url=f"/auth/callback/{provider}?{params}", status_code=302)
@@ -441,6 +462,60 @@ def subscription(request: Request, user: User = Depends(require_auth)) -> Subscr
         trial_start=user.trial_start,
         trial_expires=trial_expires,
     )
+
+
+# --- Email verification endpoints ---
+
+
+@router.post("/auth/send-verification")
+def send_verification(request: Request, user: User = Depends(require_auth)) -> dict[str, str]:
+    """Send a verification email to the current user."""
+    if user.email_verified:
+        return {"message": "Email already verified"}
+
+    if not check_resend_rate_limit(user.id):
+        raise HTTPException(status_code=429, detail="Too many verification requests")
+
+    code, token = generate_and_store_verification(user.id)
+    send_verification_email(user.email, user.name, code, token)
+    return {"message": "Verification email sent"}
+
+
+@router.post("/auth/verify-email", response_model=VerifyEmailResponse)
+def verify_email(body: VerifyEmailRequest, request: Request) -> VerifyEmailResponse:
+    """Verify a user's email with the token and 6-digit code.
+
+    No auth required — the token identifies the user.
+    """
+    try:
+        user_id = validate_verification(body.token, body.code)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    try:
+        neo4j = request.app.state.neo4j
+        neo4j.execute_write(
+            "MATCH (u:USER {id: $uid}) SET u.email_verified = true",
+            {"uid": user_id},
+        )
+    except Exception:  # noqa: BLE001
+        log.warning("neo4j_email_verify_update_failed", user_id=user_id)
+
+    return VerifyEmailResponse(verified=True, message="Email verified successfully")
+
+
+@router.post("/auth/resend-verification")
+def resend_verification(request: Request, user: User = Depends(require_auth)) -> dict[str, str]:
+    """Resend a verification email. Rate limited to 3 per hour."""
+    if user.email_verified:
+        return {"message": "Email already verified"}
+
+    if not check_resend_rate_limit(user.id):
+        raise HTTPException(status_code=429, detail="Too many verification requests")
+
+    code, token = generate_and_store_verification(user.id)
+    send_verification_email(user.email, user.name, code, token)
+    return {"message": "Verification email sent"}
 
 
 # --- Session management endpoints ---

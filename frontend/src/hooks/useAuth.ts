@@ -10,6 +10,7 @@ export interface AuthUser {
   is_admin: boolean
   provider: string
   role: UserRole | null
+  email_verified: boolean
 }
 
 interface AuthContextValue {
