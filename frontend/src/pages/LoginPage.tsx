@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '../components/ui/Tabs'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/Button'
 
-const API_BASE = '/api/v1'
+const AUTH_BASE = '/auth'
 
 function GoogleIcon() {
   return (
@@ -82,7 +82,7 @@ export default function LoginPage() {
   const [providers, setProviders] = useState<string[] | null>(null)
 
   useEffect(() => {
-    fetch(`${API_BASE}/auth/providers`)
+    fetch(`${AUTH_BASE}/providers`)
       .then((res) => (res.ok ? res.json() : Promise.reject(res)))
       .then((data: string[]) => setProviders(data))
       .catch(() => setProviders(['google', 'github']))
@@ -103,10 +103,7 @@ export default function LoginPage() {
     setOauthLoading(provider)
 
     try {
-      const res = await fetch(`${API_BASE}/auth/login/${provider}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-      })
+      const res = await fetch(`${AUTH_BASE}/oauth/${provider}/login`)
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }))
@@ -133,7 +130,7 @@ export default function LoginPage() {
 
     setFormLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/login/email`, {
+      const res = await fetch(`${AUTH_BASE}/login/email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: loginEmail, password: loginPassword }),
@@ -168,7 +165,7 @@ export default function LoginPage() {
 
     setFormLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/auth/register`, {
+      const res = await fetch(`${AUTH_BASE}/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

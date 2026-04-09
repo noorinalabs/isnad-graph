@@ -35,7 +35,9 @@ const ROLE_HIERARCHY: Record<UserRole, number> = {
   admin: 3,
 }
 
-const API_BASE = '/api/v1'
+const AUTH_BASE = '/auth'
+const USER_BASE = '/api/v1/users'
+const SESSIONS_BASE = '/api/v1/sessions'
 
 const AuthContext = createContext<AuthContextValue | null>(null)
 
@@ -46,7 +48,7 @@ function getCsrfToken(): string {
 
 async function refreshAccessToken(): Promise<string | null> {
   try {
-    const res = await fetch(`${API_BASE}/auth/refresh`, {
+    const res = await fetch(`${AUTH_BASE}/token/refresh`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -99,11 +101,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(() => {
     const token = localStorage.getItem('access_token')
     if (token) {
-      fetch(`${API_BASE}/auth/logout`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: { Authorization: `Bearer ${token}` },
-      }).catch(() => {})
+      // Revoke only the current session (best-effort)
+      const headers = { Authorization: `Bearer ${token}` }
+      fetch(`${SESSIONS_BASE}`, { headers, credentials: 'include' })
+        .then((res) => (res.ok ? res.json() : Promise.reject(res)))
+        .then((data: { sessions: Array<{ id: string; is_current: boolean }> }) => {
+          const current = data.sessions.find((s) => s.is_current)
+          if (current) {
+            return fetch(`${SESSIONS_BASE}/${current.id}`, {
+              method: 'DELETE',
+              credentials: 'include',
+              headers,
+            })
+          }
+        })
+        .catch(() => {})
     }
     clearAuth()
     window.location.href = '/login'
@@ -129,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      let res = await fetch(`${API_BASE}/auth/me`, {
+      let res = await fetch(`${USER_BASE}/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
 
@@ -142,7 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false)
           return
         }
-        res = await fetch(`${API_BASE}/auth/me`, {
+        res = await fetch(`${USER_BASE}/me`, {
           headers: { Authorization: `Bearer ${token}` },
         })
       }
@@ -162,14 +174,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const token = localStorage.getItem('access_token')
 
-    // Call logout endpoint (best-effort — clear tokens regardless)
+    // Revoke only the current session (best-effort — clear tokens regardless)
     if (token) {
       try {
-        await fetch(`${API_BASE}/auth/logout`, {
-          method: 'POST',
-          credentials: 'include',
-          headers: { Authorization: `Bearer ${token}` },
-        })
+        const headers = { Authorization: `Bearer ${token}` }
+        const res = await fetch(`${SESSIONS_BASE}`, { headers, credentials: 'include' })
+        if (res.ok) {
+          const data: { sessions: Array<{ id: string; is_current: boolean }> } = await res.json()
+          const current = data.sessions.find((s) => s.is_current)
+          if (current) {
+            await fetch(`${SESSIONS_BASE}/${current.id}`, {
+              method: 'DELETE',
+              credentials: 'include',
+              headers,
+            })
+          }
+        }
       } catch {
         // Ignore network errors — we still clear local state
       }
@@ -183,10 +203,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOutAll = useCallback(async () => {
     const token = localStorage.getItem('access_token')
 
+    // Revoke ALL sessions for this user
     if (token) {
       try {
-        await fetch(`${API_BASE}/auth/logout-all`, {
-          method: 'POST',
+        await fetch(`${SESSIONS_BASE}`, {
+          method: 'DELETE',
           credentials: 'include',
           headers: { Authorization: `Bearer ${token}` },
         })

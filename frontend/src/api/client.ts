@@ -196,7 +196,7 @@ export async function flagContent(
 // --- Subscription ---
 
 export async function fetchSubscription(): Promise<SubscriptionResponse> {
-  return fetchJson(`${API_BASE}/auth/subscription`)
+  return fetchJson(`${API_BASE}/subscriptions/me`)
 }
 
 // --- Admin: Reports ---

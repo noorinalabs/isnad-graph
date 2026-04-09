@@ -31,7 +31,7 @@ export default function CheckEmailPage() {
 
     try {
       const token = localStorage.getItem('access_token')
-      const res = await fetch(`${API_BASE}/auth/resend-verification`, {
+      const res = await fetch(`${API_BASE}/verification/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
