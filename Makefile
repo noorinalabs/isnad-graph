@@ -1,4 +1,4 @@
-.PHONY: help setup setup-hooks hooks infra infra-down infra-reset test test-integration lint typecheck format clean clean-worktrees test-e2e test-e2e-headed check backup restore
+.PHONY: help setup setup-hooks hooks infra infra-down infra-reset test test-integration lint typecheck format clean clean-worktrees test-e2e test-e2e-headed check backup restore setup-frontend frontend-e2e frontend-e2e-headed frontend-e2e-ui frontend-e2e-live
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
@@ -50,6 +50,21 @@ test-e2e: ## Run Playwright browser tests (requires running app)
 
 test-e2e-headed: ## Run Playwright tests with visible browser
 	uv run pytest tests/e2e/ -v -m e2e --headed
+
+setup-frontend: ## Install frontend dependencies + Playwright browsers
+	cd frontend && npm install && npx playwright install chromium
+
+frontend-e2e: ## Run frontend Playwright E2E tests
+	cd frontend && npx playwright test
+
+frontend-e2e-headed: ## Run frontend Playwright E2E tests with visible browser
+	cd frontend && npx playwright test --headed
+
+frontend-e2e-ui: ## Run frontend Playwright E2E tests with interactive UI
+	cd frontend && npx playwright test --ui
+
+frontend-e2e-live: ## Run frontend E2E tests against live site (headed)
+	cd frontend && BASE_URL=https://isnad-graph.noorinalabs.com npx playwright test --headed
 
 clean-worktrees: ## Remove stale git worktrees
 	git worktree prune
